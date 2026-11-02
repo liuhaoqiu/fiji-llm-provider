@@ -1,0 +1,12 @@
+* text=auto
+*.java text eol=lf
+*.md text eol=lf
+*.ps1 text eol=crlf
+# Preserve packaged resource bytes across Git checkouts.
+src/main/resources/** -text
+LICENSE.txt -text
+NOTICE.txt -text
+licenses/** -text
+MANIFEST.MF -text
+*.jar binary
+*.zip binary

@@ -1,0 +1,26 @@
+# Generated build and release files
+/build/
+/dist/
+*.class
+*.jar
+*.zip
+*.log
+
+# Local credentials, caches and conversations must never be committed
+.env
+.env.*
+!.env.example
+*.kdbx
+*.key
+*.pem
+.fiji-llm/
+.fiji-chat-history/
+*-models-v1.json
+
+# Local editor / operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*~
