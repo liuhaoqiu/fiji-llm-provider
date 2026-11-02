@@ -37,6 +37,48 @@ Fiji Chat，无须替换原版 Fiji Chat JAR。
 | Volcengine Ark | https://ark.cn-beijing.volces.com/api/v3 | Chat Completions | GET /models，另支持手动输入模型或接入点 ID |
 | NVIDIA | https://integrate.api.nvidia.com/v1 | Chat Completions | GET /models |
 
+## 界面展示
+
+**服务商选择与动态模型列表。** Fiji Chat 的 API 密钥管理器中可选择 DeepSeek、
+SiliconFlow、Volcengine 和 NVIDIA。刷新窗口展示从服务商 API 获取的模型；
+硅基流动截图中当时返回了 66 个模型，模型名称和数量会随服务端更新而变化。
+
+<p>
+  <a href="docs/manage-api-keys-providers.png"><img src="docs/manage-api-keys-providers.png" alt="API 密钥管理器中新增的四个服务商" width="260"></a>
+  <a href="docs/siliconflow-dynamic-model-list.png"><img src="docs/siliconflow-dynamic-model-list.png" alt="从硅基流动官方 API 动态刷新的模型列表" width="270"></a>
+</p>
+
+**选择服务商提供的模型。** 刷新后重新打开 Fiji Chat 的模型选择窗口，即可选择
+该服务商提供、当前账号有权调用且兼容聊天接口的各系列模型。模型列表动态获取，
+不限于下面推荐的两款模型。
+
+<p>
+  <a href="docs/siliconflow-model-selection.png"><img src="docs/siliconflow-model-selection.png" alt="Fiji Chat 模型选择器中动态获取的硅基流动模型列表" width="400"></a>
+</p>
+
+**注意模型能力差异。** API 供应商并非所有模型都支持视觉或工具调用。
+执行 Fiji 操作需要模型支持 **工具调用/函数调用**；发送图像需要支持 **视觉/图像输入**。
+同时需要看图并执行操作的任务，应选择模型和服务端接口均支持这两项能力的组合。
+请查阅服务商的模型说明和能力文档，例如硅基流动的
+[工具调用](https://docs.siliconflow.cn/docs/userguide/guides/function-calling)与
+[多模态输入](https://docs.siliconflow.cn/docs/userguide/capabilities/multimodal-vision)说明。
+
+**作者已实测并推荐（2026-11-03）：**
+
+- **DeepSeek V4.1 Flash**：硅基流动模型 ID 为 `deepseek-ai/DeepSeek-V4.1-Flash`。
+- **GLM 5.3 Flash**：硅基流动模型 ID 为 `zai-org/GLM-5.3-Flash`。
+
+以上推荐来自作者在 Fiji Chat 中的实际使用测试。同名模型在不同服务商处的 ID
+和能力可能不同，请以最新模型列表及对应服务商的模型说明为准。
+
+**执行设置。** 窗口显示扩展已生效（**ACTIVE**），上限设为
+**每条用户消息 1000 轮工具调用**。一轮可以包含多个工具调用。
+保存后重新打开 Fiji Chat，使已有聊天窗口采用新设置。
+
+[![LLM Execution Settings 显示 ACTIVE 状态和 1000 轮上限](docs/llm-execution-settings-1000.png)](docs/llm-execution-settings-1000.png)
+
+*点击任意截图可查看原尺寸图片。*
+
 ## 环境要求
 
 需要已安装 **Fiji Chat 的 Fiji**，以及所用服务商的 API 密钥。要让助手执行 Fiji

@@ -41,6 +41,52 @@ assistant conversation.
 | Volcengine Ark | `https://ark.cn-beijing.volces.com/api/v3` | Chat Completions | `GET /models`, plus manual model / endpoint ID |
 | NVIDIA | `https://integrate.api.nvidia.com/v1` | Chat Completions | `GET /models` |
 
+## Interface preview
+
+**Provider selection and dynamic model lists.** Fiji Chat's API-key manager
+includes DeepSeek, SiliconFlow, Volcengine and NVIDIA. The model-refresh dialog
+shows models retrieved from the provider's API; the SiliconFlow screenshot
+captured 66 models. Model names and counts can change as the service is updated.
+
+<p>
+  <a href="docs/manage-api-keys-providers.png"><img src="docs/manage-api-keys-providers.png" alt="API-key manager listing DeepSeek, SiliconFlow, Volcengine and NVIDIA" width="260"></a>
+  <a href="docs/siliconflow-dynamic-model-list.png"><img src="docs/siliconflow-dynamic-model-list.png" alt="SiliconFlow model list refreshed from the official API" width="270"></a>
+</p>
+
+**Choose a model from your provider.** After refreshing, reopen Fiji Chat's model
+chooser. You can select any compatible chat model available through your
+provider and account, across the model families in its catalog. The list is
+fetched dynamically and is not limited to the models recommended below.
+
+<p>
+  <a href="docs/siliconflow-model-selection.png"><img src="docs/siliconflow-model-selection.png" alt="Fiji Chat model chooser showing the dynamically refreshed SiliconFlow catalog" width="400"></a>
+</p>
+
+**Check model capabilities.** Not every model in a provider's catalog supports
+vision or tool calling. Fiji actions require **tool/function calling**; sending
+images requires **vision/image input**. A workflow that combines both needs a
+model and provider endpoint that support both. Consult the provider's model card
+and capability documentation, such as SiliconFlow's
+[function calling](https://docs.siliconflow.cn/docs/userguide/guides/function-calling)
+and [multimodal input](https://docs.siliconflow.cn/docs/userguide/capabilities/multimodal-vision) guides.
+
+**Author-tested recommendations (2026-11-03):**
+
+- **DeepSeek V4.1 Flash** — SiliconFlow ID: `deepseek-ai/DeepSeek-V4.1-Flash`.
+- **GLM 5.3 Flash** — SiliconFlow ID: `zai-org/GLM-5.3-Flash`.
+
+These recommendations reflect the author's Fiji Chat testing. Model IDs and
+capabilities can differ between providers; use the current catalog and the
+specific provider's model documentation.
+
+**Execution settings.** The extension reports **ACTIVE**, with the maximum set
+to **1000 tool-calling rounds per message**. One round can contain several tool
+calls. Save the setting and reopen Fiji Chat to apply it to an existing chat.
+
+[![LLM Execution Settings showing ACTIVE and a 1000-round maximum](docs/llm-execution-settings-1000.png)](docs/llm-execution-settings-1000.png)
+
+*Click any screenshot to view it at full resolution.*
+
 ## Requirements
 
 You need a working **Fiji installation with Fiji Chat installed**, plus an API key
