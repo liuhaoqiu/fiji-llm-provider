@@ -43,6 +43,11 @@ Fiji Chat，无须替换原版 Fiji Chat JAR。
 SiliconFlow、Volcengine 和 NVIDIA。刷新窗口展示从服务商 API 获取的模型；
 硅基流动截图中当时返回了 66 个模型，模型名称和数量会随服务端更新而变化。
 
+**更新模型列表的方法：** 在 Fiji 主窗口菜单依次选择
+**Help → Assistants → Refresh LLM Models...**，选择 API 服务商并刷新；
+如有提示，解锁 API 密钥库。刷新完成后，重新打开 Fiji Chat 的模型选择窗口，
+即可看到更新后的模型列表。
+
 <p>
   <a href="docs/manage-api-keys-providers.png"><img src="docs/manage-api-keys-providers.png" alt="API 密钥管理器中新增的四个服务商" width="260"></a>
   <a href="docs/siliconflow-dynamic-model-list.png"><img src="docs/siliconflow-dynamic-model-list.png" alt="从硅基流动官方 API 动态刷新的模型列表" width="270"></a>

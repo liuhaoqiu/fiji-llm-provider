@@ -48,6 +48,11 @@ includes DeepSeek, SiliconFlow, Volcengine and NVIDIA. The model-refresh dialog
 shows models retrieved from the provider's API; the SiliconFlow screenshot
 captured 66 models. Model names and counts can change as the service is updated.
 
+**How to refresh the model list:** In Fiji's main menu, choose
+**Help → Assistants → Refresh LLM Models...**, select the API provider, and
+refresh. Unlock the API-key vault if prompted. When the refresh finishes,
+reopen Fiji Chat's model chooser to see the updated list.
+
 <p>
   <a href="docs/manage-api-keys-providers.png"><img src="docs/manage-api-keys-providers.png" alt="API-key manager listing DeepSeek, SiliconFlow, Volcengine and NVIDIA" width="260"></a>
   <a href="docs/siliconflow-dynamic-model-list.png"><img src="docs/siliconflow-dynamic-model-list.png" alt="SiliconFlow model list refreshed from the official API" width="270"></a>
