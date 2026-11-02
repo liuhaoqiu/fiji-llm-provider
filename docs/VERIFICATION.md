@@ -1,0 +1,93 @@
+# Release verification: 0.5.1
+
+**English** | [简体中文](zh-CN/VERIFICATION.md)
+
+Verified on **2026-11-03** with the release source and its public `build.ps1`.
+
+## Environment
+
+| Component | Verified version |
+| --- | --- |
+| Operating system | Windows 11 |
+| Fiji / ImageJ2 | 2.18.0 |
+| ImageJ1 | 1.54p |
+| Fiji Chat | `fiji-llm-0.2.0-SNAPSHOT.jar` |
+| Java / compiler | 21.0.7, with `--release 17` |
+| LangChain4j | 1.21.0 |
+| Build frontend | PowerShell 7 |
+
+The tested Fiji Chat core SHA-256 is:
+
+```text
+2b0ca4fb9c71298d6d285a1956b0ba9a7029cbfc725f0bb846db67456a32926c
+```
+
+A different snapshot may have the same filename but different interfaces or
+behavior. Other upstream dependency sets and operating systems are unverified.
+
+## Build result
+
+The public build script completed all **nine verification suites** and produced
+`fiji-llm-provider-0.5.1.jar` with SHA-256:
+
+```text
+b2516afaa46ca21213121ed39e4b0896322a64f6a9405f67ba8eeb564b09705d
+```
+
+The release changes the compiled default to **1000**. A saved positive custom
+limit still takes precedence; invalid stored values fall back to 1000.
+
+The final build includes the unmodified PolyForm Noncommercial license,
+attribution notice and upstream BSD license. All three packaged notice files
+were compared byte-for-byte with the source distribution. The final build
+completed without the restricted-environment file-access errors encountered in
+an earlier build attempt. The JAR contains seven SciJava registrations and does
+not bundle test classes, runtime dependency JARs or model caches.
+
+## Assistant execution checks
+
+- Real SciJava discovery selects the extension's assistant service and injects
+  the actual provider, tool and image service dependencies.
+- All four added providers and the core ChatGPT, Claude, Gemini and Ollama
+  providers instantiate in the headless verification context.
+- The unmodified core reproduces its original failure after 100 tool rounds.
+- Each added provider completes a 150-round loop in synchronous and streaming
+  modes, and each new streaming user message receives a fresh budget.
+- A default-configured streaming assistant completes **1000 tool rounds** and
+  returns its final answer. With 1001 rounds requested, the limit error is
+  reported and the 1001st tool round is not executed.
+- A custom limit of 3 is honored; multiple tools within one response still
+  count as one round.
+- Image payloads, image access policy, normalization, supplied memory, default
+  request parameters and tool-error handling remain connected.
+- The native settings module initializes, saves and cancels correctly. An
+  inactive service reports that settings cannot be applied.
+- An unrelated provider delegates to the installed core and retains its
+  original limit and local-image policy.
+
+## Provider regression checks
+
+The remaining suites cover dynamic catalogs and model removal, stale-cache
+handling, metadata, native key-manager waiting/cancellation, the empty-list
+startup loop, multimodal memory, both API protocols, streaming, tool replies,
+reasoning content, exact image payloads, authentication failures and manual Ark
+endpoint persistence.
+
+The timeout suite holds response headers for 65 seconds and separately sends
+SSE keep-alives for 65 seconds. All four providers' synchronous/streaming
+factories pass. The original Chat Completions control reproduces its 60-second
+timeout; the original Responses control completes. Effective 30-minute response
+and 15-second connection settings, upstream 504 errors and the Ark metadata
+regression are checked.
+
+## Scope
+
+Tests use deterministic local model/tool implementations and loopback HTTP
+servers. They do not read a live API key, invoke paid inference, run user macros,
+modify open images or change the saved execution limit.
+
+This validates integration behavior in the listed environment. It does not
+establish live account permissions, every model's tool/vision support, scientific
+correctness of generated macros, or compatibility with future Fiji Chat releases.
+The public catalog lookup documented in the implementation notes is separate
+from these local tests.
