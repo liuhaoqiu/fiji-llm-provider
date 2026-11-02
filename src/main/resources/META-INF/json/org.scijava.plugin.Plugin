@@ -1,0 +1,7 @@
+{"class":"sc.fiji.llm.deepseek.DeepSeekProvider","values":{"name":"DeepSeek","priority":96.5,"type":"sc.fiji.llm.provider.LLMProvider"}}
+{"class":"sc.fiji.llm.deepseek.SiliconFlowProvider","values":{"name":"SiliconFlow","priority":96.4,"type":"sc.fiji.llm.provider.LLMProvider"}}
+{"class":"sc.fiji.llm.deepseek.VolcengineProvider","values":{"name":"Volcengine","priority":96.3,"type":"sc.fiji.llm.provider.LLMProvider"}}
+{"class":"sc.fiji.llm.deepseek.NvidiaProvider","values":{"name":"NVIDIA","priority":96.2,"type":"sc.fiji.llm.provider.LLMProvider"}}
+{"class":"sc.fiji.llm.deepseek.RefreshLLMModels","values":{"menuPath":"Help>Assistants>Refresh LLM Models...","type":"org.scijava.command.Command"}}
+{"class":"sc.fiji.llm.deepseek.ProviderAssistantService","values":{"priority":100.0,"type":"org.scijava.service.Service"}}
+{"class":"sc.fiji.llm.deepseek.ConfigureAssistantExecution","values":{"menuPath":"Help>Assistants>LLM Execution Settings...","initializer":"initialize","type":"org.scijava.command.Command"}}
