@@ -11,6 +11,15 @@ Fiji Chat，无须替换原版 Fiji Chat JAR。
 
 **当前版本：0.5.1。** 这是独立扩展，不是 Fiji 或模型服务商的官方发行版。
 
+## 使用示例
+
+在 Fiji Chat 中使用 **DeepSeek Flash** 编写并测试调整亮度和对比度的 ImageJ 宏。
+截图展示了调整前的图像（左）、调整后的显示效果（中），以及宏编辑器和助手对话。
+
+[![Fiji Chat 使用 DeepSeek Flash 调整图像亮度和对比度的工作流程](docs/fiji-chat-contrast-brightness-demo.png)](docs/fiji-chat-contrast-brightness-demo.png)
+
+*点击图片可查看原尺寸截图。*
+
 ## 功能
 
 - 在 Fiji Chat 模型选择器中添加四个服务商。

@@ -13,6 +13,17 @@ services; it does not replace the original Fiji Chat JAR.
 **Current version: 0.5.1.** This is an independent extension, not an official
 release from Fiji or any model provider.
 
+## Example workflow
+
+Fiji Chat using **DeepSeek Flash** to create and test an ImageJ macro for
+brightness and contrast adjustment. The screenshot shows the image before
+adjustment (left), the adjusted display (center), and the macro editor and
+assistant conversation.
+
+[![Fiji Chat with DeepSeek Flash: brightness and contrast adjustment workflow](docs/fiji-chat-contrast-brightness-demo.png)](docs/fiji-chat-contrast-brightness-demo.png)
+
+*Click the image to view the full-resolution screenshot.*
+
 ## Features
 
 - Four hosted providers in Fiji Chat's model chooser.
