@@ -68,6 +68,8 @@ public final class AssistantExecutionVerificationMain {
         final AtomicReference<Boolean> localModel = new AtomicReference<>();
         final AtomicInteger handledErrors = new AtomicInteger();
         int rounds, batch = 1;
+        int failRequest = -1;
+        String result = "result";
         boolean nativeImages, failTool;
         final ChatModel sync = new ChatModel() {
             @Override public ChatResponse doChat(ChatRequest request) { return next(request); }
@@ -76,6 +78,8 @@ public final class AssistantExecutionVerificationMain {
             @Override public void doChat(ChatRequest request, StreamingChatResponseHandler handler) {
                 executor.execute(() -> {
                     try {
+                        if (requests.get() + 1 == failRequest)
+                            handler.onPartialThinking(new dev.langchain4j.model.chat.response.PartialThinking("unfinished-thinking-progress-marker"));
                         ChatResponse response = next(request);
                         var calls = response.aiMessage().toolExecutionRequests();
                         if (calls != null) for (int i = 0; i < calls.size(); i++)
@@ -89,6 +93,7 @@ public final class AssistantExecutionVerificationMain {
         ChatResponse next(ChatRequest request) {
             observed.set(request);
             int round = requests.incrementAndGet();
+            if (round == failRequest) throw new IllegalArgumentException("Failed to buffer the request body: length limit exceeded");
             if (round > rounds) return ChatResponse.builder().aiMessage(AiMessage.from("done")).build();
             List<ToolExecutionRequest> calls = new ArrayList<>();
             for (int i = 0; i < batch; i++) calls.add(ToolExecutionRequest.builder()
@@ -99,7 +104,7 @@ public final class AssistantExecutionVerificationMain {
             ToolExecutor tool = (request, memoryId) -> {
                 executions.incrementAndGet();
                 if (failTool) throw new IllegalStateException("synthetic tool failure");
-                return "result";
+                return result;
             };
             return proxy(AiToolService.class, (p,m,a) -> switch (m.getName()) {
                 case "getToolsWithExecutors" -> Map.of(TOOL, tool);
@@ -146,6 +151,8 @@ public final class AssistantExecutionVerificationMain {
             var command = context.service(CommandService.class).getCommand(ConfigureAssistantExecution.class);
             check(command != null && command.getMenuPath().getMenuString().endsWith("LLM Execution Settings..."),
                 "settings command is discoverable");
+            check(context.service(CommandService.class).getCommand(ShowContextStatus.class) != null,
+                "context monitoring command is discoverable");
             ProviderAssistantService service = (ProviderAssistantService) selected;
 
             // Reproduce the exact existing limit with the installed core service.
@@ -287,8 +294,14 @@ public final class AssistantExecutionVerificationMain {
         module.initialize();
         check(get(command, "status").toString().endsWith("ACTIVE"), "settings reports active service");
         set(command, ConfigureAssistantExecution.class, "maxToolCallingRoundTrips", 410);
+        set(command, ConfigureAssistantExecution.class, "maxInputTokens", 524288);
+        set(command, ConfigureAssistantExecution.class, "maxRequestMiB", 40);
+        set(command, ConfigureAssistantExecution.class, "outputReserveTokens", 32768);
         command.run();
         check(AssistantExecutionSettings.roundTrips(preferences(values)) == 410, "saved value read through stable preference namespace");
+        check(AssistantExecutionSettings.inputTokens(prefs) == 524288 &&
+            AssistantExecutionSettings.requestMiB(prefs) == 40 &&
+            AssistantExecutionSettings.outputReserve(prefs) == 32768, "context UI settings persist across reconstruction");
         set(command, ConfigureAssistantExecution.class, "maxToolCallingRoundTrips", 0);
         command.run();
         check(AssistantExecutionSettings.roundTrips(prefs) == 410, "invalid setting does not overwrite previous value");

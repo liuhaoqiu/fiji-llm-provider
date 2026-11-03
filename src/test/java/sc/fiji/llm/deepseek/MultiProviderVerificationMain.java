@@ -195,6 +195,7 @@ public final class MultiProviderVerificationMain {
         check(nvidia.getModelCatalogStatus().contains("non-chat models"), "NVIDIA catalog scope explained");
         var values = new java.util.HashMap<String, String>();
         var prefs = (PrefService) java.lang.reflect.Proxy.newProxyInstance(PrefService.class.getClassLoader(), new Class<?>[]{PrefService.class}, (p,m,a) -> {
+            if (m.getName().equals("getInt")) return Integer.parseInt(values.getOrDefault((String)a[1], String.valueOf(a[2])));
             if (m.getName().equals("get")) return values.getOrDefault((String) a[1], (String) a[2]);
             if (m.getName().equals("put")) values.put((String) a[1], String.valueOf(a[2]));
             return null;

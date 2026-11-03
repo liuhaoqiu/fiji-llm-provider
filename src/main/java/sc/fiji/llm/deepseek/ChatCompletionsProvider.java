@@ -30,7 +30,7 @@ public abstract class ChatCompletionsProvider extends AbstractCatalogProvider {
         return OpenAiChatModel.builder().baseUrl(baseUrl()).apiKey(apiKey()).modelName(modelName)
             .timeout(responseTimeout()).httpClientBuilder(httpClientBuilder())
             .defaultRequestParameters(defaultChatRequestParameters(modelName))
-            .returnThinking(true).sendThinking(true).listeners(listeners()).build();
+            .returnThinking(true).sendThinking(true).listeners(monitoredListeners(modelName)).build();
     }
 
     @Override public StreamingChatModel createStreamingChatModel(String modelName) {
@@ -38,6 +38,6 @@ public abstract class ChatCompletionsProvider extends AbstractCatalogProvider {
         return OpenAiStreamingChatModel.builder().baseUrl(baseUrl()).apiKey(apiKey()).modelName(modelName)
             .timeout(responseTimeout()).httpClientBuilder(httpClientBuilder())
             .defaultRequestParameters(defaultChatRequestParameters(modelName))
-            .returnThinking(true).sendThinking(true).listeners(listeners()).build();
+            .returnThinking(true).sendThinking(true).listeners(monitoredListeners(modelName)).build();
     }
 }

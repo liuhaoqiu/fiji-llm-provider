@@ -22,9 +22,9 @@
 
 ## 输出
 
-九组验证全部通过后生成：
+十三组验证全部通过后生成：
 
-    build/fiji-llm-provider-0.5.1.jar
+    build/fiji-llm-provider-0.5.5.jar
 
 中间类文件和 Java 参数文件放在新的 build/run-.../ 目录中，避免旧类混入新 JAR。
 编译和测试类路径排除所有已安装的本扩展版本。参数文件用于避开 Windows 命令长度限制。
@@ -32,7 +32,7 @@
 版本号来自 MANIFEST.MF，发行版打包时间固定；.gitattributes 保留资源和许可文件的字节。
 JAR 内包含 LICENSE.txt、NOTICE.txt 及上游许可证。更换 JDK 或依赖组合可能生成不同字节。
 
-## 九组验证
+## 十三组验证
 
 | 验证程序 | 覆盖范围 |
 | --- | --- |
@@ -62,3 +62,6 @@ SciJava 插件索引位于：
 编译采用 -proc:none；添加或重命名插件时，要同时更新索引、Java 注解及发现测试。
 历史包名 sc.fiji.llm.deepseek 包含全部四个服务商，保留它是为了兼容设置和既有集成。
 相关兼容修复的依据见[实现说明](DEVELOPMENT.md)。
+
+
+第十三组 ContextBudgetVerificationMain 覆盖上下文控制和聊天面板恢复，详见[上下文说明](CONTEXT.md)。

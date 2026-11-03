@@ -87,8 +87,9 @@ Write-JavaArgumentFile $compileTestArguments (@('--release','17','-encoding','UT
 if ($LASTEXITCODE -ne 0) { throw 'Test compilation failed.' }
 $runtimeArguments = Join-Path $runDirectory 'test-classpath.args'
 Write-JavaArgumentFile $runtimeArguments @('--add-opens=java.base/java.lang=ALL-UNNAMED',
+    "-Dfiji.llm.contextArchiveRoot=$runDirectory/context-archives",
     '-cp',"$tests;$candidateJar;$dependencyClassPath")
-foreach ($test in @('VerificationMain','KeyManagerVerificationMain','StartupVerificationMain',
+foreach ($test in @('TaskRetentionVerificationMain','StreamStatusVerificationMain','ProgressDisplayVerificationMain','ContextBudgetVerificationMain','VerificationMain','KeyManagerVerificationMain','StartupVerificationMain',
     'ModelCatalogVerificationMain','MultimodalVerificationMain','TransportVerificationMain',
     'MultiProviderVerificationMain','AssistantExecutionVerificationMain','ProviderTimeoutVerificationMain')) {
     & (Join-Path $jdkBin 'java.exe') "@$runtimeArguments" "sc.fiji.llm.deepseek.$test"
@@ -96,5 +97,5 @@ foreach ($test in @('VerificationMain','KeyManagerVerificationMain','StartupVeri
 }
 
 Copy-Item -LiteralPath $candidateJar -Destination $outputJar -Force
-Write-Output "All nine verification suites passed. Built: $outputJar"
+Write-Output "All thirteen verification suites passed. Built: $outputJar"
 Get-FileHash -LiteralPath $outputJar -Algorithm SHA256

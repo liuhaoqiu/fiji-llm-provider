@@ -18,10 +18,27 @@
 
 ## After a failed long task
 
-Save any useful script still open in the editor. This extension does not add
-failed-turn persistence or automatic resumption. Attach the current script and
-describe the remaining work in a new message. A new message gets a new round
-budget; it does not automatically undo tools that already ran.
+Save useful scripts, images, ROIs and result tables. Recognized context-size or
+transport interruptions and empty final replies produce a **Task paused — not
+completed** checkpoint. Reply **continue** in the same chat and specify any
+remaining constraints. The extension preserves working context and a separate
+full local archive; it does not automatically retry requests, replay tools or
+resume external processes after restarting Fiji. Other errors may still use
+Fiji Chat's normal error handling. A new user message gets a fresh round budget;
+it does not undo tools that already ran. See [Context and recovery](CONTEXT.md).
+
+## Startup fails while loading old history
+
+An earlier blank reply can leave an invalid saved assistant message. If
+`Required service is missing: sc.fiji.llm.chat.ConversationService` is preceded
+by `text cannot be null`, inspect the underlying history-loading exception.
+Version 0.5.5 prevents new blank final replies but does not automatically repair
+previously damaged history. Other service-initialization failures can have
+different causes, including incompatible dependencies.
+
+Close Fiji and back up `.fiji-chat-history` before inspecting or isolating only
+the offending record. Preserve the other conversations. Do not delete the whole
+history as a first step or publish private conversation files in an issue.
 
 ## If an input dialog is not visible
 

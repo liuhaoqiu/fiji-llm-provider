@@ -29,10 +29,10 @@ Java processes with synthetic inputs and loopback HTTP servers.
 
 ## Build outputs
 
-After all nine suites pass, the output is:
+After all ten suites pass, the output is:
 
 ```text
-build/fiji-llm-provider-0.5.1.jar
+build/fiji-llm-provider-0.5.5.jar
 ```
 
 Intermediate classes and Java argument files are kept under a fresh
@@ -77,3 +77,6 @@ its Java annotation and discovery tests.
 The historical Java package `sc.fiji.llm.deepseek` contains all four providers.
 Keeping it preserves preferences and existing integrations. See
 [Implementation notes](DEVELOPMENT.md) for the rationale behind the compatibility fixes.
+
+
+The tenth suite, `ContextBudgetVerificationMain`, covers the context and UI recovery behavior documented in [Context](CONTEXT.md).

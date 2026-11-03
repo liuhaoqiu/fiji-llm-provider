@@ -81,7 +81,7 @@ establish that an image-processing result is scientifically appropriate.
 
 ## Controlling long tasks
 
-Open **Help > Assistants > LLM Execution Settings...**. The default in 0.5.1 is
+Open **Help > Assistants > LLM Execution Settings...**. The default in 0.5.5 is
 **1000 rounds per user message**. You can save a different positive integer.
 
 A round is a model reply containing tool requests. Several tool calls can belong
@@ -93,9 +93,9 @@ Your saved preference takes precedence over future defaults. This controls the
 four providers supplied by this extension; other providers retain the core
 assistant's behavior.
 
-Reaching the limit ends the current invocation. This version does not add a
-checkpoint or resume button. Save useful scripts and continue from their current
-state in a new message if necessary. Raising a limit gives the model more room;
+Reaching the tool-round limit ends the invocation. Context-size failures instead
+preserve a phase checkpoint and permit a new continuation in the same chat.
+See [Context budgets and progress recovery](CONTEXT.md). Raising a limit gives the model more room;
 it does not guarantee convergence or faster responses.
 
 ## What is stored locally
@@ -109,3 +109,6 @@ it does not guarantee convergence or faster responses.
 
 The release package does not include any of these local data files. See
 [Troubleshooting](TROUBLESHOOTING.md) for connection, model-list and execution errors.
+
+
+Full context archives and partial streamed progress are stored locally; see [Context](CONTEXT.md).

@@ -2,6 +2,42 @@
 
 **English** | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.5.5 — 2026-11-03
+
+- Restore the user task after real TokenWindowChatMemory image eviction, including under-budget requests; retain the initial request and recent follow-ups per chat.
+- Prevent synthetic summaries from replacing the task and label normalized tool-image messages as continuation evidence.
+- Supplement missing SiliconFlow context lengths from the official public model page, without hardcoding model IDs; retain cached metadata on failure.
+- Disclose the total model window, output reserve and metadata source. Distinguish token compaction from body-byte compaction and move the byte soft trigger to 90%.
+- Add real image-eviction, independent-chat, fresh-image, history-serialization and large-page metadata regressions; thirteen local suites in total.
+
+## 0.5.4 — 2026-11-03
+
+- Distinguish waiting for API output from waiting for a tool result. After 60 seconds
+  without new output/events, show a clearly labeled plugin status, elapsed idle time
+  and last finished tool; this is not a claim of model or scientific progress.
+- Apply the existing 30-minute timeout to idle SSE body reads after headers arrive.
+  SSE keepalive comments do not count as model output. Active data events and long
+  synchronous tool callbacks are allowed to continue.
+- Preserve a paused assistant reply and local checkpoint on transport interruptions or empty final replies,
+  keeping earlier activity and same-chat continuation without automatic tool replay.
+- Timestamp new streamed archive events. Add local stalled-body, keepalive, active
+  stream/tool and partial-progress regression checks; twelve local suites in total.
+
+## 0.5.3 — 2026-11-03
+
+- Route detailed compaction checkpoints to the live activity channel.
+- Keep ordinary stage output concise and include a neutral recent tool-result excerpt.
+- Preserve subsequent thinking/tool events and final-answer delivery after compaction.
+- Reproduce 0.5.2 behavior and cover the fix in the original Fiji chat panel; eleven suites pass.
+
+## 0.5.2 — 2026-11-03
+
+- Configurable automatic/512K/1M context windows with a separate output reserve.
+- Serialized UTF-8 body-size checks and a live context status window.
+- Extractive context organization, full local message/progress archives and phase checkpoints.
+- Recover context-size failures as visible paused tasks, retaining tool activity and allowing same-chat continuation.
+- Ten local verification suites; real long-running API workflows still require manual integration verification.
+
 ## 0.5.1 — 2026-11-03
 
 - Raise the default tool-calling budget from 300 to **1000 rounds per user message**

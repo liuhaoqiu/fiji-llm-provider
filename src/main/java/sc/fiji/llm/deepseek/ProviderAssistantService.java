@@ -38,7 +38,6 @@ import org.scijava.plugin.Plugin;
 import org.scijava.prefs.PrefService;
 import org.scijava.service.Service;
 import sc.fiji.llm.assistant.DefaultAssistantService;
-import sc.fiji.llm.chat.ImageToolResultNormalizer;
 import sc.fiji.llm.image.ImageRenderingService;
 import sc.fiji.llm.provider.ProviderService;
 import sc.fiji.llm.tools.AiToolService;
@@ -80,18 +79,38 @@ public class ProviderAssistantService extends DefaultAssistantService {
             .chatModel(provider.createChatModel(modelName))
             .maxToolCallingRoundTrips(configuredRoundTrips());
 
+        var hosted = (AbstractCatalogProvider) provider;
+        // Builders above resolve the catalog before reading its context metadata.
+        long window = hosted.contextWindow(modelName);
+        int selected = AssistantExecutionSettings.inputTokens(prefs);
+        if (selected > 0) window = Math.min(window, selected);
+        final int output = Math.max(1, (int) Math.min(hosted.outputReserve(modelName),
+            Math.min(window / 4, AssistantExecutionSettings.outputReserve(prefs))));
+        var context = new BoundedContext(window - output, hosted.requestByteLimit());
+        context.label = providerName + " / " + modelName + "\nTotal model window: " + window +
+            "; reserved output: " + output + "; context source: " + hosted.contextWindowSource(modelName);
+        context.imageTokenAllowance = providerName.equals("DeepSeek") ? 1024 : 16384;
+        ChatMemory workingMemory = chatMemory == null ? null : context.archive.wrap(chatMemory);
+        context.workingMemory = workingMemory;
+
         builder.chatRequestTransformer(request -> {
             ChatRequest transformed = request;
             if (defaultChatParameters != null) {
                 transformed = request.toBuilder().parameters(
                     defaultChatParameters.overrideWith(request.parameters())).build();
             }
+            Integer requestedOutput = transformed.maxOutputTokens();
+            transformed = transformed.toBuilder().parameters(transformed.parameters().overrideWith(
+                ChatRequestParameters.builder().maxOutputTokens(requestedOutput == null ? output :
+                    Math.min(output, requestedOutput)).build())).build();
+            transformed = context.prepare(transformed);
             if (!provider.supportsImageToolResults(modelName)) {
-                transformed = ImageToolResultNormalizer.normalize(transformed);
+                transformed = context.normalizeImageResults(transformed);
             }
+            RequestBudget.checkTokens(transformed, context.inputLimit, context.imageTokenAllowance);
             return transformed;
         });
-        if (chatMemory != null) builder.chatMemory(chatMemory);
-        return builder.build();
+        if (workingMemory != null) builder.chatMemory(workingMemory);
+        return ProgressAssistant.wrap(assistantInterface, builder.build(), context, workingMemory);
     }
 }

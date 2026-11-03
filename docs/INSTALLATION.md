@@ -22,10 +22,10 @@ identify identical upstream bytes; see [Verification](VERIFICATION.md).
 
 1. Save your images, scripts and analysis results, then close Fiji normally.
 2. From this repository's GitHub **Releases** page, download
-   `fiji-llm-provider-0.5.1.jar` and, optionally, `SHA256SUMS.txt`.
+   `fiji-llm-provider-0.5.5.jar` and, optionally, `SHA256SUMS.txt`.
 3. Locate your Fiji installation directory. It contains the launcher and a
    directory named `jars`.
-4. Copy `fiji-llm-provider-0.5.1.jar` into that `jars` directory.
+4. Copy `fiji-llm-provider-0.5.5.jar` into that `jars` directory.
 5. Keep exactly one active version of this extension. Move older
    `fiji-llm-provider-*.jar` and `fiji-deepseek-provider-*.jar` files outside
    `jars`, or append `.disabled` to their filenames.
@@ -39,7 +39,7 @@ identify identical upstream bytes; see [Verification](VERIFICATION.md).
 Windows users can check the downloaded file with PowerShell:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath .\fiji-llm-provider-0.5.1.jar
+Get-FileHash -Algorithm SHA256 -LiteralPath .\fiji-llm-provider-0.5.5.jar
 ```
 
 Compare the result to the entry for that filename in the release's
@@ -57,7 +57,7 @@ Close Fiji before replacing extension JARs. Existing API keys and model caches
 remain in Fiji's own storage. The DeepSeek provider retains its original service
 and class names for compatibility with previous versions.
 
-Version 0.5.1 raises the **default** from 300 to 1000. An explicitly saved value
+Version 0.5.5 raises the **default** from 300 to 1000. An explicitly saved value
 still takes precedence. If **LLM Execution Settings...** shows 300 after an
 upgrade, change it to 1000 and save. Reopen Fiji Chat to rebuild an existing
 assistant with the new setting. A running request is not changed mid-task.

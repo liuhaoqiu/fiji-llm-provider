@@ -1,93 +1,42 @@
-# Release verification: 0.5.1
+# Release verification: 0.5.5
 
 **English** | [简体中文](zh-CN/VERIFICATION.md)
 
-Verified on **2026-11-03** with the release source and its public `build.ps1`.
+All **thirteen local suites passed** on 2026-11-03 against the installed Fiji
+dependency set: Windows 11, Java 21.0.7, Fiji/ImageJ 2.18.0 / 1.54p,
+Fiji Chat 0.2.0-SNAPSHOT, LangChain4j 1.21.0; compiled with --release 17.
 
-## Environment
+JAR SHA-256: `5f615e360fe1d8926ae8edb7e1fecea1dbe295e1acb3e74efd056fae4e19d112`
 
-| Component | Verified version |
-| --- | --- |
-| Operating system | Windows 11 |
-| Fiji / ImageJ2 | 2.18.0 |
-| ImageJ1 | 1.54p |
-| Fiji Chat | `fiji-llm-0.2.0-SNAPSHOT.jar` |
-| Java / compiler | 21.0.7, with `--release 17` |
-| LangChain4j | 1.21.0 |
-| Build frontend | PowerShell 7 |
+Tested Fiji Chat core SHA-256: `4d9925076bb17fb02cb10830b6385d44101edc90ab28b9d967c21a02e03a8eca`
 
-The tested Fiji Chat core SHA-256 is:
+The previous twelve suites still cover provider discovery, credential-dialog
+sequencing, startup recovery, model catalogs, multimodal results, both HTTP
+protocols, all four providers, the real 1000/1001 tool-round boundaries, 65-second
+delayed headers/keepalives, context compaction and post-compaction chat activity.
 
-```text
-2b0ca4fb9c71298d6d285a1956b0ba9a7029cbfc725f0bb846db67456a32926c
-```
+`StreamStatusVerificationMain` additionally verifies:
 
-A different snapshot may have the same filename but different interfaces or
-behavior. Other upstream dependency sets and operating systems are unverified.
+- Honest idle API/tool notices, inactivity reset on output, and no notices after completion.
+- A local HTTP server sending headers and then no body data, or only keepalive comments.
+- A single timeout callback for idle SSE bodies; ongoing data and long synchronous tool callbacks survive.
+- Preserved partial activity, a saved paused reply/checkpoint and same-chat memory on interruption.
+- Duplicate errors/late completion do not duplicate the paused reply or rerun requests/tools.
+- A real empty `response.incomplete` event through the installed Responses model and AiServices.
+- The empty assistant placeholder is removed from continuation memory, while the full archive is retained.
 
-## Build result
+The task-eviction regression was independently run against installed 0.5.4:
+it failed the expected outgoing-task-retention assertion. The 0.5.5 candidate passed.
+These are local synthetic tests, not live hosted inference or manual acceptance
+of the user's microscopy workflow. No real API key or user image was used.
 
-The public build script completed all **nine verification suites** and produced
-`fiji-llm-provider-0.5.1.jar` with SHA-256:
+`TaskRetentionVerificationMain` additionally covers actual TokenWindowChatMemory
+image eviction, restoration on under-budget requests, initial-task/follow-up
+retention, separate chats, tool-image continuation labels, first-image byte
+headroom, actual Fiji history serialization and large escaped website metadata.
+The exact SiliconFlow DeepSeek-V4.1-Flash model was also verified against the
+public official model page: total window 1,048,576, output reserve 65,536,
+input budget 983,040, local body cap 16 MiB. No API inference was performed.
 
-```text
-b2516afaa46ca21213121ed39e4b0896322a64f6a9405f67ba8eeb564b09705d
-```
-
-The release changes the compiled default to **1000**. A saved positive custom
-limit still takes precedence; invalid stored values fall back to 1000.
-
-The final build includes the unmodified PolyForm Noncommercial license,
-attribution notice and upstream BSD license. All three packaged notice files
-were compared byte-for-byte with the source distribution. The final build
-completed without the restricted-environment file-access errors encountered in
-an earlier build attempt. The JAR contains seven SciJava registrations and does
-not bundle test classes, runtime dependency JARs or model caches.
-
-## Assistant execution checks
-
-- Real SciJava discovery selects the extension's assistant service and injects
-  the actual provider, tool and image service dependencies.
-- All four added providers and the core ChatGPT, Claude, Gemini and Ollama
-  providers instantiate in the headless verification context.
-- The unmodified core reproduces its original failure after 100 tool rounds.
-- Each added provider completes a 150-round loop in synchronous and streaming
-  modes, and each new streaming user message receives a fresh budget.
-- A default-configured streaming assistant completes **1000 tool rounds** and
-  returns its final answer. With 1001 rounds requested, the limit error is
-  reported and the 1001st tool round is not executed.
-- A custom limit of 3 is honored; multiple tools within one response still
-  count as one round.
-- Image payloads, image access policy, normalization, supplied memory, default
-  request parameters and tool-error handling remain connected.
-- The native settings module initializes, saves and cancels correctly. An
-  inactive service reports that settings cannot be applied.
-- An unrelated provider delegates to the installed core and retains its
-  original limit and local-image policy.
-
-## Provider regression checks
-
-The remaining suites cover dynamic catalogs and model removal, stale-cache
-handling, metadata, native key-manager waiting/cancellation, the empty-list
-startup loop, multimodal memory, both API protocols, streaming, tool replies,
-reasoning content, exact image payloads, authentication failures and manual Ark
-endpoint persistence.
-
-The timeout suite holds response headers for 65 seconds and separately sends
-SSE keep-alives for 65 seconds. All four providers' synchronous/streaming
-factories pass. The original Chat Completions control reproduces its 60-second
-timeout; the original Responses control completes. Effective 30-minute response
-and 15-second connection settings, upstream 504 errors and the Ark metadata
-regression are checked.
-
-## Scope
-
-Tests use deterministic local model/tool implementations and loopback HTTP
-servers. They do not read a live API key, invoke paid inference, run user macros,
-modify open images or change the saved execution limit.
-
-This validates integration behavior in the listed environment. It does not
-establish live account permissions, every model's tool/vision support, scientific
-correctness of generated macros, or compatibility with future Fiji Chat releases.
-The public catalog lookup documented in the implementation notes is separate
-from these local tests.
+Only the extension JAR is replaced. The Fiji Chat core is unchanged.
+See [waiting and recovery behavior](CONTEXT.md).

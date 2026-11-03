@@ -4,7 +4,7 @@
 
 SciJava provider and assistant-execution extension for Fiji Chat.
 
-Version 0.5.1 is one extension JAR containing four service providers and their
+Version 0.5.5 is one extension JAR containing four service providers and their
 configurable assistant execution service:
 
 | Service | Base URL | Chat protocol | Model discovery |
@@ -24,7 +24,7 @@ The vault master password unlocks the vault; it is not a service API key.
 Upgrading from Fiji DeepSeek Provider keeps the DeepSeek service name, provider
 class, key-vault entry and cache path, so existing configuration remains valid.
 Disable previous `fiji-deepseek-provider-*.jar` or `fiji-llm-provider-*.jar` versions before installing
-`fiji-llm-provider-0.5.1.jar`; loading both creates duplicate providers.
+`fiji-llm-provider-0.5.5.jar`; loading both creates duplicate providers.
 The former `Refresh DeepSeek Models...` menu is replaced by the unified menu.
 
 ### Tool-calling round limit
@@ -48,8 +48,10 @@ Only `AbstractCatalogProvider` instances supplied by this extension use the
 override. Other providers delegate to the installed `DefaultAssistantService`.
 The existing tool/error handlers, image privacy state, request parameters,
 image-tool normalization and supplied conversation memory are retained. The
-extension does not replace classes in the Fiji Chat JAR, change model prompts,
-replay failed requests, or add failed-turn persistence/resume UI.
+extension does not replace classes in the Fiji Chat JAR or replay completed
+tools. Version 0.5.5 adds working-context excerpts, a separate full local archive,
+and visible paused-turn checkpoints through the public TokenStream callbacks.
+See [Context budgets](CONTEXT.md) for current behavior and limitations.
 
 The limit and extension JAR are separate from Fiji Chat's own files, so replacing
 the core JAR does not itself reset the saved value. Compatibility still depends
@@ -156,7 +158,7 @@ The API key is managed by Fiji Chat's existing encrypted key vault. Do not put
 the key in source files, build commands, or logs.
 
 Run `build.ps1` using the installed Fiji JDK to compile, package and execute all
-nine offline verification suites. The key-manager regression uses the actual
+ten offline verification suites. The key-manager regression uses the actual
 SciJava CommandService and ModuleService in an isolated headless context to
 reproduce the null future and verify waiting, refresh sequencing and cancellation.
 The startup regression directly exercises the

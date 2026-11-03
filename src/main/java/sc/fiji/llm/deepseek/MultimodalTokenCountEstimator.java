@@ -19,9 +19,15 @@ final class MultimodalTokenCountEstimator extends OpenAiTokenCountEstimator {
     // Budget allowance, not an exact DeepSeek image-token count. No image fetches
     // or base64 tokenization are performed while managing conversation memory.
     private static final int IMAGE_TOKEN_ALLOWANCE = 16_384;
+    private final int imageTokenAllowance;
 
     MultimodalTokenCountEstimator() {
+        this(IMAGE_TOKEN_ALLOWANCE);
+    }
+
+    MultimodalTokenCountEstimator(int imageTokenAllowance) {
         super("gpt-4o");
+        this.imageTokenAllowance = imageTokenAllowance;
     }
 
     @Override
@@ -42,7 +48,7 @@ final class MultimodalTokenCountEstimator extends OpenAiTokenCountEstimator {
             if (content instanceof TextContent text) {
                 count += estimateTokenCountInText(text.text());
             } else if (content instanceof ImageContent) {
-                count += IMAGE_TOKEN_ALLOWANCE;
+                count += imageTokenAllowance;
             } else {
                 throw new IllegalArgumentException("Unsupported memory content type: " +
                     content.getClass().getSimpleName());

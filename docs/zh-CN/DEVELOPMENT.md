@@ -3,7 +3,7 @@
 [English](../DEVELOPMENT.md) | **简体中文**
 
 本项目通过 SciJava 扩展 Fiji Chat 的服务商与助手执行服务。
-0.5.1 使用一个 JAR，包含四个服务商及可配置的助手执行服务：
+0.5.5 使用一个 JAR，包含四个服务商及可配置的助手执行服务：
 
 | 服务商 | API 地址 | 聊天协议 | 模型发现 |
 | --- | --- | --- | --- |
@@ -17,7 +17,7 @@
 最后在 Fiji Chat 选择服务商和模型。密钥库主密码只用于解锁，不是 API 密钥。
 
 从 Fiji DeepSeek Provider 升级时，DeepSeek 的服务名、类名、密钥条目及缓存路径
-保持不变。安装 0.5.1 前停用旧版 fiji-deepseek-provider-*.jar 或
+保持不变。安装 0.5.5 前停用旧版 fiji-deepseek-provider-*.jar 或
 fiji-llm-provider-*.jar，避免重复注册。旧的 Refresh DeepSeek Models 菜单
 由统一的 Refresh LLM Models 替代。
 
@@ -36,8 +36,9 @@ fiji-llm-provider-*.jar，避免重复注册。旧的 Refresh DeepSeek Models �
 
 只有本扩展的 AbstractCatalogProvider 实例使用覆盖行为；其他服务商委托给已安装的
 DefaultAssistantService。保留原工具和错误处理、图像隐私状态、请求参数、
-图像工具结果规范化及传入的聊天记忆。不替换本体 JAR 类、不修改模型提示词、
-不重放失败请求，也不添加失败轮次持久化或恢复界面。
+图像工具结果规范化及传入的聊天记忆。不替换本体 JAR 类，也不自动重放已完成的工具。
+0.5.5 增加工作上下文摘录、独立的完整本地归档，并通过公开 TokenStream 回调
+显示任务暂停检查点，详见[上下文预算](CONTEXT.md)。
 
 本体更新本身不会重置独立保存的上限，但兼容性仍取决于 SciJava 服务入口和
 Fiji/LangChain4j 接口。四个新增服务商使用与当前本体相应的构建逻辑，
@@ -130,7 +131,7 @@ SciJava 插件索引显式纳入源码，因为此 Windows Fiji 自带的注解�
 无法重写索引输出。构建验证覆盖服务商、命令和服务发现；添加插件时需同步注解和索引。
 API 密钥只由现有加密密钥库管理，不应写入源码、构建命令或日志。
 
-build.ps1 使用本地 Fiji 依赖完成编译、打包和九组本地验证。
+build.ps1 使用本地 Fiji 依赖完成编译、打包和十三组本地验证。
 密钥管理测试使用真实 CommandService、ModuleService 和隔离的无图形上下文，
 复现 null Future 并验证等待、刷新顺序及取消。启动测试直接执行已安装
 Fiji_Chat 的 initialize/run 方法，使用隔离设置和服务。

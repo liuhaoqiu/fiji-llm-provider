@@ -38,11 +38,54 @@ public abstract class AbstractCatalogProvider extends AbstractLLMProvider {
 		// Responses has no model-level timeout setter: configure its HTTP builder
 		// directly. Chat Completions resets both values from its model timeout,
 		// so keep connection setup bounded independently in either protocol.
-		return new JdkHttpClientBuilder() {
+		return new BudgetHttpClientBuilder(new JdkHttpClientBuilder() {
 			@Override public JdkHttpClientBuilder connectTimeout(Duration ignored) {
 				return super.connectTimeout(Duration.ofSeconds(15));
 			}
-		}.connectTimeout(Duration.ofSeconds(15)).readTimeout(responseTimeout());
+		}.connectTimeout(Duration.ofSeconds(15)).readTimeout(responseTimeout()),
+			requestByteLimit());
+	}
+
+	long requestByteLimit() {
+		int saved = AssistantExecutionSettings.requestMiB(preferences());
+		return (saved == 0 ? (getName().equals("DeepSeek") ? 48 : 16) : saved) * 1_048_576L;
+	}
+
+	long contextWindow(String modelName) {
+		Long reported = reportedContextWindow(modelName);
+		int selected = AssistantExecutionSettings.inputTokens(preferences());
+		if (selected > 0) return reported == null ? selected : Math.min(selected, reported);
+		return reported == null ? 32_768 : reported;
+	}
+
+	protected Long reportedContextWindow(String modelName) {
+		var model = catalog().model(modelName);
+		return model == null ? null : model.contextWindow();
+	}
+
+	String contextWindowSource(String modelName) {
+		if (AssistantExecutionSettings.inputTokens(preferences()) > 0) return "manual setting, capped by known provider metadata";
+		return reportedContextWindow(modelName) == null ? "metadata unavailable: conservative 32768-token fallback" : "provider API metadata";
+	}
+
+	int outputReserve(String modelName) {
+		var model = catalog().model(modelName);
+		long max = model == null || model.maxOutputTokens() == null ? Integer.MAX_VALUE : model.maxOutputTokens();
+		return (int) Math.max(1, Math.min(Math.min(max, contextWindow(modelName) / 4),
+			AssistantExecutionSettings.outputReserve(preferences())));
+	}
+
+	protected java.util.List<dev.langchain4j.model.chat.listener.ChatModelListener> monitoredListeners(String modelName) {
+		var existing = listeners();
+		var result = new java.util.ArrayList<dev.langchain4j.model.chat.listener.ChatModelListener>();
+		if (existing != null) result.addAll(existing);
+		result.add(new dev.langchain4j.model.chat.listener.ChatModelListener() {
+			@Override public void onResponse(dev.langchain4j.model.chat.listener.ChatModelResponseContext response) {
+				var usage = response.chatResponse().tokenUsage();
+				if (usage != null) ContextMonitor.usage(usage.inputTokenCount());
+			}
+		});
+		return result;
 	}
 
 	protected String loadModelsLabel() { return "<Unlock / refresh " + getName() + " models...>"; }
@@ -234,8 +277,9 @@ public abstract class AbstractCatalogProvider extends AbstractLLMProvider {
 		 * O200K encoding and is used only as a conservative local approximation.
 		 */
 		DeepSeekModelCatalog.Model model = modelInfo(modelName);
-		return TokenWindowChatMemory.withMaxTokens(model == null ? 32_768 : model.memoryTokenLimit(),
-			new MultimodalTokenCountEstimator());
+		return TokenWindowChatMemory.withMaxTokens((int) Math.min(Integer.MAX_VALUE / 2L,
+			contextWindow(modelName) - outputReserve(modelName)),
+			new MultimodalTokenCountEstimator(getName().equals("DeepSeek") ? 1024 : 16384));
 	}
 
 	@Override
@@ -244,7 +288,7 @@ public abstract class AbstractCatalogProvider extends AbstractLLMProvider {
 		return OpenAiResponsesChatModel.builder().baseUrl(baseUrl()).apiKey(apiKey())
 			.httpClientBuilder(httpClientBuilder())
 			.modelName(modelName).defaultRequestParameters(
-				defaultChatRequestParameters(modelName)).listeners(listeners()).build();
+				defaultChatRequestParameters(modelName)).listeners(monitoredListeners(modelName)).build();
 	}
 
 	@Override
@@ -252,7 +296,7 @@ public abstract class AbstractCatalogProvider extends AbstractLLMProvider {
 		requireAvailableModel(modelName);
 		return OpenAiResponsesStreamingChatModel.builder().baseUrl(baseUrl()).apiKey(
 			apiKey()).httpClientBuilder(httpClientBuilder()).modelName(modelName).defaultRequestParameters(
-				defaultChatRequestParameters(modelName)).listeners(listeners()).build();
+				defaultChatRequestParameters(modelName)).listeners(monitoredListeners(modelName)).build();
 	}
 
 	/** Overridable only to support an isolated local transport test. */
