@@ -94,3 +94,15 @@ Fiji 工具可能修改打开的图像和脚本。请检查结果并保存需要
 
 
 完整上下文及未完成的流式进度保存在本地，详见[上下文说明](CONTEXT.md)。
+
+## 分析交付包保存位置（0.5.12）
+
+助手可以调用 `fiji_analysis_save_bundle`，明确提供原图/标签图 ID、分析通道以及当前脚本句柄和哈希。**聊天任务完成本身并不自动保存交付包**。成功保存后，正文阶段进展会显示实际 `manifest.json` 路径；若没有这条保存记录，可要求助手保存交付包。
+
+Windows 默认保存到以下目录内的新建唯一子文件夹：
+
+```text
+%LOCALAPPDATA%\FijiChat\context-archives\<记录 UUID>\exports\analysis-<唯一后缀>\
+```
+
+也可以指定 `output_directory` 作为父目录，每次仍新建子文件夹。包内有 `script/<文件名>`（脚本精确快照）、`source.tif`、`labels.tif`、`qc.tif`、`measurements.csv`、`rois.zip` 和包含路径、大小、SHA-256 的 `manifest.json`。每个非零唯一标签对应一条 ROI，保留不连通部分与孔洞，不改动已有的全局 ROI Manager 和 Results。当前助手工具支持单个二维平面；保存快照不会改变编辑器标签的文件位置，也不代表已通过空白状态复现。部分导出失败时会保留 `INCOMPLETE.txt` 标记。

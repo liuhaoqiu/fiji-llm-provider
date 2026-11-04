@@ -213,6 +213,7 @@ public final class MacroExecutionService extends AbstractService implements
 				preparationFailure[0]);
 		}
 
+        execution.imageIdsBefore=new MacroImageIds();
 		execution.environmentCapture = environmentSnapshotService.capture(
 			PixelChangeTracking.FINAL_SHA256);
 
@@ -476,6 +477,7 @@ public final class MacroExecutionService extends AbstractService implements
 		if (execution.environmentCapture != null) execution.environment = execution
 			.environmentCapture.finish();
         closeWriters(execution);
+        if(execution.imageIdsBefore!=null)execution.imageIdsFinal=execution.imageIdsBefore.observe();
         macroActive = false;
         executions.complete(execution.runID);
         execution.finished = System.currentTimeMillis();
@@ -591,6 +593,8 @@ public final class MacroExecutionService extends AbstractService implements
 					RunKind.MACRO ? "fiji_macro_run_status" : "fiji_script_run_status");
 			}
             try { WorkflowTools.enrichDialogs(result); } catch (Exception unavailable) { /* Retain original dialog evidence. */ }
+            JsonObject observed=execution.imageIdsFinal!=null?execution.imageIdsFinal:execution.imageIdsBefore==null?null:execution.imageIdsBefore.observe();
+            if(observed!=null)for(var entry:observed.entrySet())result.add(entry.getKey(),entry.getValue().deepCopy());
 			return result;
 		}
 
@@ -644,6 +648,8 @@ public final class MacroExecutionService extends AbstractService implements
         private volatile MacroRunScope scope;
         private volatile JTextAreaWriter outputWriter, errorWriter;
         private String source;
+        private volatile MacroImageIds imageIdsBefore;
+        private volatile JsonObject imageIdsFinal;
 		private volatile Thread monitorThread;
 		private volatile String primaryError;
 		private volatile String errorDialog;

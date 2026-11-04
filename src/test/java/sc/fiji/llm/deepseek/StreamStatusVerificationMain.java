@@ -37,7 +37,15 @@ public final class StreamStatusVerificationMain {
         }
         verifyStatus();
         verifyNetwork();
-        verifyPausedReply();
+        verifyPausedReply(new HttpTimeoutException("SSE stream idle timeout"));
+        verifyPausedReply(new IllegalStateException("{\"code\":50509,\"message\":\"Model service timeout. Please try again later.\",\"data\":null}"));
+        verifyProviderTimeoutHttp();
+        check(BoundedContext.isTransportFailure(new IllegalStateException("outer", new RuntimeException("MODEL SERVICE TIMEOUT"))),
+            "nested, case-insensitive provider timeout is recoverable");
+        check(!BoundedContext.isTransportFailure(new RuntimeException("{\"code\":401,\"message\":\"Invalid token\"}")),
+            "authentication failure is not a timeout");
+        check(!BoundedContext.isContextFailure(new RuntimeException("{\"code\":50509,\"message\":\"Model service timeout\"}")),
+            "provider timeout must not reduce context budgets");
         verifyEmptyApiReply();
         check(!BoundedContext.isTransportFailure(new IllegalStateException("archive write", new IOException("disk failure"))),
             "archive failure must not be mislabeled as a network interruption");
@@ -115,7 +123,7 @@ public final class StreamStatusVerificationMain {
         } finally { server.stop(0); pool.shutdownNow(); }
     }
     @SuppressWarnings("unchecked")
-    private static void verifyPausedReply() throws Exception {
+    private static void verifyPausedReply(Throwable interruption) throws Exception {
         var context = new BoundedContext(24000, 1_048_576);
         var memory = MessageWindowChatMemory.withMaxMessages(20);
         var request = ToolExecutionRequest.builder().id("edit-1").name("fiji_script_replace_content").arguments("{}").build();
@@ -129,7 +137,7 @@ public final class StreamStatusVerificationMain {
                 starts.incrementAndGet();
                 ((Consumer<PartialThinking>)callbacks.get("onPartialThinking")).accept(new PartialThinking("PARTIAL_LOG_RETAINED"));
                 ((Consumer<String>)callbacks.get("onPartialResponse")).accept("UNFINISHED_PUBLIC_DRAFT");
-                ((Consumer<Throwable>)callbacks.get("onError")).accept(new HttpTimeoutException("SSE stream idle timeout"));
+                ((Consumer<Throwable>)callbacks.get("onError")).accept(interruption);
                 ((Consumer<Throwable>)callbacks.get("onError")).accept(new IOException("late duplicate failure"));
                 ((Consumer<ChatResponse>)callbacks.get("onCompleteResponse")).accept(ChatResponse.builder().aiMessage(AiMessage.from("LATE_COMPLETION" )).build());
                 return null;
@@ -147,6 +155,43 @@ public final class StreamStatusVerificationMain {
         check(((AiMessage)memory.messages().get(memory.messages().size()-1)).text().contains("Task paused"), "checkpoint in same-chat memory");
         check(java.nio.file.Files.readString(context.archive.directory.resolve("checkpoint.md")).contains("Cellpose"), "full local checkpoint retained");
     }
+
+    private static void verifyProviderTimeoutHttp() throws Exception {
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        var requests = new AtomicInteger();
+        server.createContext("/v1/chat/completions", exchange -> {
+            requests.incrementAndGet(); exchange.getRequestBody().readAllBytes();
+            byte[] payload = "{\"code\":50509,\"message\":\"Model service timeout. Please try again later.\",\"data\":null}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(504, payload.length);
+            try (var out = exchange.getResponseBody()) { out.write(payload); }
+            finally { exchange.close(); }
+        });
+        server.start();
+        try {
+            var context = new BoundedContext(24000, 1_048_576);
+            var memory = MessageWindowChatMemory.withMaxMessages(20);
+            var model = dev.langchain4j.model.openai.OpenAiStreamingChatModel.builder()
+                .baseUrl("http://127.0.0.1:"+server.getAddress().getPort()+"/v1")
+                .apiKey("fixture-only").modelName("fixture").timeout(Duration.ofSeconds(2)).build();
+            Assistant delegate = dev.langchain4j.service.AiServices.builder(Assistant.class)
+                .streamingChatModel(model).chatMemory(memory)
+                .chatRequestTransformer((request,id) -> context.prepare(request)).build();
+            var wrapped = ProgressAssistant.wrap(Assistant.class, delegate, context, memory);
+            var done = new CountDownLatch(1); var result = new AtomicReference<ChatResponse>();
+            var failure = new AtomicReference<Throwable>();
+            wrapped.stream("Continue the nuclei-counting task").onPartialResponse(t -> {})
+                .onCompleteResponse(r -> { result.set(r); done.countDown(); })
+                .onError(e -> { failure.set(e); done.countDown(); }).start();
+            check(done.await(15, TimeUnit.SECONDS), "provider timeout must end visibly");
+            check(failure.get()==null && result.get()!=null && result.get().aiMessage().text().contains("Task paused"),
+                "actual HTTP 50509 response must preserve a continuable paused reply, not destructive UI error rollback");
+            check(requests.get()==1, "timeout recovery must not automatically replay requests");
+            check(!java.nio.file.Files.readString(context.archive.directory.resolve("checkpoint.md")).contains("Context/request-size limit reached"),
+                "provider timeout is not a context-size failure");
+        } finally { server.stop(0); }
+    }
+
     private static void check(boolean value, String message) { if (!value) throw new AssertionError(message); }
 
     private static void verifyEmptyApiReply() throws Exception {

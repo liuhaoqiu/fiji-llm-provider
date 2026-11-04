@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.12
+
+- Bind existing script create/replace tools to filename/language and stable handle/hash; no active-tab replacement fallback.
+- Add live macro output IDs and retain terminal observations.
+- Save unique analysis bundles with exact script/TIFF/CSV/QC/ROI artifacts and a hash/path manifest; retain global Results and ROI Manager.
+- Build one canonical ROI per unique label, including holes/disconnected components; template ROI export avoids global reset.
+
+
+## 0.5.11 (local changes included in 0.5.12; no separate release)
+
+- Display nested script execution errors/warnings/success with script identity.
+- Add stable editor-target reads and atomic hash-checked edits; retain active-tab compatibility.
+- Add bounded command-status waiting (default 20 seconds, 0–30 configurable), early dialog/completion/error return and cancellation without command replay.
+- Add engineering regressions and real two-tab editor integration.
+
+Recognize provider `Model service timeout` responses (including code 50509) as recoverable API interruptions. Preserve progress/checkpoints without automatic request or tool replay.
+
+识别模型服务超时并保留阶段记录，支持原会话继续；不自动重试请求或工具。
+
 **English** | [简体中文](CHANGELOG.zh-CN.md)
 
 ## 0.5.10 — 2026-11-04

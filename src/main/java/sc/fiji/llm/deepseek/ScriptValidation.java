@@ -29,6 +29,6 @@ final class ScriptValidation {
     static JsonObject active()throws Exception{return UiAutomationTools.edt(()->{
         ScriptID id=TextEditorUtils.getActiveScriptID();if(id==null)throw new IllegalStateException("No active script");
         var item=ScriptContextUtilities.buildScriptContextItem(id.editorIndex,id.tabIndex);
-        return evidence(id.toString(),item.getScriptBody());
+        var out=evidence(id.toString(),item.getScriptBody());out.addProperty("script_name",item.getScriptName());return out;
     });}
 }

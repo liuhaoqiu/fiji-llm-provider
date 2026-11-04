@@ -1,17 +1,11 @@
-# Release verification: 0.5.10
+# 0.5.12 verification
 
 **English** | [简体中文](zh-CN/VERIFICATION.md)
 
-All **19 local suites and three isolated GUI integrations passed**. New checks execute real SciJava dynamic commands and ImageJ Macro public bridge calls, apply explicit typed values after initialization, reject malformed inputs before command execution, and prepare the actual installed Cellpose v3 command with explicit diameter/cu126/GPU inputs without running inference. The generated macro scaffold is replayed end to end against a synthetic label-producing command, retaining original pixels.
+All **21 local suites and five isolated GUI integrations passed**. Actual registered create/replace tools bind filename/language and stable handle/hash, reject language mismatches and active-tab fallback, preserve non-target content and run newly created macros immediately. Real macro receipts return distinct live image IDs. Bundle tests reopen TIFFs and ROI ZIPs, compare exact raw pixels/ROI rasters/script bytes/hashes, handle gapped/disconnected/holed/single-pixel/empty labels, retain source selection and existing Results/ROI Manager, and use unique non-overwriting destinations. Registered export persists executed-source evidence and a complete artifact manifest. All previous 20 suites and four GUI integrations remain passing.
 
-Image checks cover exact red-channel extraction, unique nonzero/gapped label counting, original-source intensities instead of label values, border objects, immutable source pixels, non-destructive overlays and independently written CSV. Actual displayed tables/QC retain existing global Results and ROI Manager. Macro/editor tests bind exact executed source hashes, invalidate an edited script, expose actionable dialog IDs and independently display unverified script status in the final report.
+Only the extension changes. Default 1000 rounds, core Fiji Chat, Script Editor and licenses are retained. No hosted inference, credentials, private images or actual Cellpose inference was used. This validates engineering behavior; exported image selections are not automatically proven outputs of the saved script.
 
-The preceding 18 suites remain passing: presentation/history/cancellation, macro worker completion, task retention, context budgets, all four provider transports/catalogs, real 1000/1001 boundaries and delayed/idle streams. Tests use synthetic inputs and local servers. No hosted inference, API keys or private images were used. Actual Cellpose inference and scientific segmentation accuracy were not rerun/certified; effective GPU inputs are not actual-device evidence. User testing is needed to assess model adoption and real-task quality.
+JAR SHA-256: `f321f8e1766a2b34b70a37625e3329faece0e3589c844baa3be01fd75bf9c36f`
 
-JAR SHA-256: `0e2e45617c5cdb85865f28680a73dd2ea696a5ce1815dd3975df70cfe6269a28`
-
-Unmodified Fiji Chat SHA-256: `4d9925076bb17fb02cb10830b6385d44101edc90ab28b9d967c21a02e03a8eca`
-
-Unmodified Script Editor SHA-256: `08f73d26b7cdda0e7f30cc8754ace7c297e6bcbe0ebe365d504315507e850351`
-
-Environment: Windows 11, Fiji/ImageJ 2.18.0 / 1.54p, Fiji Chat 0.2.0-SNAPSHOT, Script Editor 1.4.3, Cellpose Appose 0.1.24, Java 21.0.7 and LangChain4j 1.21.0. Compilation target Java 17. See [workflow behavior and limits](WORKFLOW.md).
+The downloaded Fiji Chat update also passed all 21 suites and five GUI integrations; see [exact compatibility scope](COMPATIBILITY.md).

@@ -112,3 +112,15 @@ The release package does not include any of these local data files. See
 
 
 Full context archives and partial streamed progress are stored locally; see [Context](CONTEXT.md).
+
+## Saved analysis bundles (0.5.12)
+
+The assistant can call `fiji_analysis_save_bundle` with explicit source/label image IDs, source channel and the current script handle/hash. Completion of a chat task alone does **not** save this bundle. After a successful save, the public progress entry reports the actual `manifest.json` path; ask the assistant to save the bundle if that entry is absent.
+
+On Windows, the default destination is a fresh folder under:
+
+```text
+%LOCALAPPDATA%\FijiChat\context-archives\<record UUID>\exports\analysis-<unique suffix>\
+```
+
+The tool can instead use a requested `output_directory` as the parent; each export creates a unique child folder. The bundle contains `script/<filename>` (an exact script snapshot), `source.tif`, `labels.tif`, `qc.tif`, `measurements.csv`, `rois.zip` and `manifest.json` with file sizes and SHA-256 hashes. The ROI ZIP has one ROI per unique nonzero label, including disconnected parts and holes; existing global ROI Manager and Results are retained. The helper currently supports one 2D plane. Exporting does not relocate the editor tab or prove a clean-state replay. A failed partial export is marked `INCOMPLETE.txt`.

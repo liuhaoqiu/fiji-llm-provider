@@ -29,10 +29,10 @@ Java processes with synthetic inputs and loopback HTTP servers.
 
 ## Build outputs
 
-After all nineteen suites pass, the output is:
+After all twenty-one suites pass, the output is:
 
 ```text
-build/fiji-llm-provider-0.5.10.jar
+build/fiji-llm-provider-0.5.12.jar
 ```
 
 Intermediate classes and Java argument files are kept under a fresh
@@ -48,6 +48,8 @@ using a different JDK or upstream dependency set may produce different bytes.
 
 | Suite | Coverage |
 | --- | --- |
+| `EngineeringVerificationMain` | Nested execution errors, stable editor targets and bounded command waiting |
+| `DeliveryVerificationMain` | Bound create/replace tools, macro image IDs and exact analysis bundle round trips |
 | `WorkflowVerificationMain` | Real command and macro bridges, explicit inputs, source-bound label measurements, CSV/QC immutability and script-version evidence |
 | `ExecutorWorkerVerificationMain` | Ordinary executor idle workers, active/queued/scheduled work and unknown children |
 | `UiAutomationVerificationMain` | Numeric editor/model commit, range checks and actual installed Cellpose-SAM parameter metadata |

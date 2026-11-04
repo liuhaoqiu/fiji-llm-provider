@@ -218,8 +218,8 @@ final class BoundedContext {
     String transportInterrupted(Throwable error) {
         var source = lastRequest == null ? List.<ChatMessage>of() : lastRequest.messages();
         latestCheckpoint = "## 任务暂停 / Task paused — not completed\n\n" +
-            "API 连接超时、中断或未返回可用的最终回复，后续工作尚未完成。阶段记录已保存；可在本对话中输入“继续”。\n" +
-            "The API connection timed out, was interrupted, or returned no usable final answer. Further work is not completed. " +
+            "API 请求超时、中断，或模型服务未返回可用的最终回复，后续工作尚未完成。阶段记录已保存；可在本对话中输入“继续”。\n" +
+            "The API request timed out, was interrupted, or the model service returned no usable final answer. Further work is not completed. " +
             "Progress was preserved; reply ‘continue’ in this conversation.\n\n" +
             summary(source, archive.task()) + "\n\nDiagnostic: " + error.getClass().getSimpleName() +
             ". No tools were automatically replayed. A request may have reached the provider.\n" +
@@ -236,7 +236,8 @@ final class BoundedContext {
             String text = String.valueOf(cause.getMessage()).toLowerCase(java.util.Locale.ROOT);
             if (text.contains("request timed out") || text.contains("read timed out") ||
                 text.contains("connection reset") || text.contains("unexpected end of stream") ||
-                text.contains("sse stream idle timeout") || text.contains("request timeout")) return true;
+                text.contains("sse stream idle timeout") || text.contains("request timeout") ||
+                text.contains("model service timeout")) return true;
         }
         return false;
     }

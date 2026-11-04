@@ -10,11 +10,11 @@ API-key manager, and provides a configurable assistant tool-round limit with a
 default of **1000 rounds per user message**. It extends Fiji Chat through SciJava
 services; it does not replace the original Fiji Chat JAR.
 
-**Current version: 0.5.10.** This is an independent extension, not an official
+**Current version: 0.5.12.** This is an independent extension, not an official
 release from Fiji or any model provider.
 
 
-Version 0.5.10 adds explicit command inputs, a source-preserving macro scaffold, independent label/intensity measurements and exact-script execution evidence. See [Workflow tools](docs/WORKFLOW.md).
+Version 0.5.12 binds the existing script creation/editing tools to explicit languages and stable targets, returns macro output IDs and saves complete local analysis bundles with canonical ROI sets. It retains the 0.5.11 timeout, error-display and waiting improvements. Version 0.5.10 added explicit command inputs, a source-preserving macro scaffold, independent label/intensity measurements and exact-script execution evidence. See [Workflow tools](docs/WORKFLOW.md).
 
 Version 0.5.9 fixes a remaining wait for idle ordinary executor workers after a macro finishes. It also adds stable dialog/control IDs, committed numeric input, command-parameter discovery and tracked image closure. See [Automation compatibility](docs/AUTOMATION.md).
 
@@ -34,7 +34,7 @@ See [Macro execution compatibility](docs/MACRO-EXECUTION.md).
 The context monitoring, task retention, automatic compaction and recovery
 features from 0.5.5 are retained. See [Context and recovery](docs/CONTEXT.md).
 
-See the [0.5.10 local notes](docs/releases/v0.5.10.md) and [verification](docs/VERIFICATION.md). The 0.5.8 release notes remain available in the release history.
+See the [0.5.12 release notes](docs/releases/v0.5.12.md) and [verification](docs/VERIFICATION.md). The 0.5.8 release notes remain available in the release history.
 
 ## Example workflow
 
@@ -55,14 +55,13 @@ assistant conversation.
 - Shared response timeout configuration for long model requests.
 - Multimodal message handling and image-tool normalization where required.
 - A configurable tool-calling round limit for the four added providers.
-- Nineteen local verification suites requiring no live API key, plus optional real macro/Cellpose integration checks.
+- Twenty-one local verification suites requiring no live API key, plus optional real macro/Cellpose integration checks.
 
 | Provider | API base | Protocol | Model discovery |
 | --- | --- | --- | --- |
 | DeepSeek | `https://api.deepseek.com` | Responses | `GET /models` |
 | SiliconFlow | `https://api.siliconflow.cn/v1` | Chat Completions | `GET /models?sub_type=chat` |
 | Volcengine Ark | `https://ark.cn-beijing.volces.com/api/v3` | Chat Completions | `GET /models`, plus manual model / endpoint ID |
-| Volcengine Ark | [Create or manage API keys](https://docs.volcengine.com/docs/ark/manage-api-keys?lang=zh) |
 | NVIDIA | `https://integrate.api.nvidia.com/v1` | Chat Completions | `GET /models` |
 
 ## Interface preview
@@ -135,7 +134,7 @@ dependency sets or operating systems. See [compatibility and verification](docs/
    It currently uses the `Fiji-chat` update site at
    `https://sites.imagej.net/Fiji-chat/`.
 2. Save your work and **close Fiji**.
-3. Download `fiji-llm-provider-0.5.10.jar` from the [Releases page](https://github.com/liuhaoqiu/fiji-llm-provider/releases).
+3. Download `fiji-llm-provider-0.5.12.jar` from the [Releases page](https://github.com/liuhaoqiu/fiji-llm-provider/releases).
    Optionally compare its SHA-256 with `SHA256SUMS.txt` in the same release.
 4. Copy the JAR into the **`jars` directory inside your Fiji installation**.
    Do not replace `fiji-llm-*.jar`, which belongs to Fiji Chat itself.
@@ -156,6 +155,7 @@ Create an API key in the corresponding provider's console:
 | --- | --- |
 | DeepSeek | [Create or manage API keys](https://platform.deepseek.com/api_keys) |
 | SiliconFlow | [Create or manage API keys](https://cloud.siliconflow.cn/me/account/ak) |
+| Volcengine Ark | [Create or manage API keys](https://docs.volcengine.com/docs/ark/manage-api-keys?lang=zh) |
 | NVIDIA | [Create or manage API keys](https://build.nvidia.com/settings/api-keys) |
 
 Then add the key in Fiji through **Help → Assistants → Manage API Keys...**.
@@ -185,7 +185,7 @@ For Ark endpoint IDs, NVIDIA catalog caveats and example workflows, see
 
 Open **Help > Assistants > LLM Execution Settings...**.
 
-- The default in **0.5.10 is 1000 rounds per user message**.
+- The default in **0.5.12 is 1000 rounds per user message**.
 - You can save any positive integer appropriate to your task.
 - One model reply containing several tool calls counts as **one round**. The
   displayed tool-use count can therefore differ from the round count.
@@ -251,8 +251,8 @@ If the bundled JDK cannot be found, supply it explicitly:
 pwsh -NoProfile -File .\build.ps1 -FijiRoot "C:\path\to\Fiji" -JdkHome "C:\path\to\jdk-21"
 ```
 
-The script compiles against Fiji's installed JARs, runs all nineteen verification
-suites, and writes `build/fiji-llm-provider-0.5.10.jar` only after they pass.
+The script compiles against Fiji's installed JARs, runs all twenty-one verification
+suites, and writes `build/fiji-llm-provider-0.5.12.jar` only after they pass.
 The timeout suite deliberately waits at least 65 seconds. Tests use local
 servers and synthetic models/tools; they do not process your open images or
 change your saved tool-round preference. See [Building](docs/BUILDING.md).
@@ -274,3 +274,5 @@ permissions for educational and other listed organizations in the license.
 Assistant builder wiring adapted from [Fiji LLM](https://github.com/fiji/fiji-llm)
 retains its upstream BSD 2-Clause notice. Dependencies are not bundled. See
 [Licensing](docs/LICENSING.md) and [NOTICE.txt](NOTICE.txt) for scope and attribution.
+
+Compatibility with the downloaded Fiji Chat update was checked separately: see [exact builds and results](docs/COMPATIBILITY.md).
