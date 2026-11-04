@@ -9,8 +9,12 @@
 助手工具调用轮数上限，默认 **每条用户消息 1000 轮**。它通过 SciJava 服务扩展
 Fiji Chat，无须替换原版 Fiji Chat JAR。
 
-**当前版本：0.5.12。** 这是独立扩展，不是 Fiji 或模型服务商的官方发行版。
+**当前版本：0.5.17。** 这是独立扩展，不是 Fiji 或模型服务商的官方发行版。
 
+
+0.5.17 汇总自 0.5.12 以来审阅通过的改进：明确错误弹窗及原因、完整显示错误定位标记、隔离展示故障、改善忙碌/启动诊断及编辑器兼容。详见[发布说明](docs/releases/v0.5.17.zh-CN.md)和[执行状态](docs/zh-CN/STATUS.md)。
+
+**实测任务完成更快：**同一图像分析请求的近期完整运行约 **5–9 分钟**，此前审阅的 0.5.12 运行约 **11 分 37 秒**。这是完整任务的运行观察，不是控制变量速度基准；详见[耗时与适用范围](docs/releases/v0.5.17.zh-CN.md#实测任务耗时缩短)。
 
 0.5.12 将现有脚本创建/编辑工具绑定到明确语言和稳定目标，宏回执返回图像 ID，并支持完整本地交付包与对应 ROI 集；保留 0.5.11 的超时恢复、错误展示和等待优化。0.5.10 增加明确参数执行、保留原图的宏模板、独立标签/强度测量和精确脚本版本的执行核验。详见[工作流工具](docs/zh-CN/WORKFLOW.md)。
 
@@ -28,7 +32,7 @@ Fiji Chat，无须替换原版 Fiji Chat JAR。
 
 保留 0.5.5 的上下文监测、任务保留、自动整理和中断恢复。详见[上下文与恢复](docs/zh-CN/CONTEXT.md)。
 
-详见[0.5.12 发布说明](docs/releases/v0.5.12.zh-CN.md)和[验证记录](docs/zh-CN/VERIFICATION.md)。0.5.8 发布说明保留在历史记录中。
+详见[0.5.17 发布说明](docs/releases/v0.5.17.zh-CN.md)和[验证记录](docs/zh-CN/VERIFICATION.md)。0.5.8 发布说明保留在历史记录中。
 
 ## 使用示例
 
@@ -47,7 +51,7 @@ Fiji Chat，无须替换原版 Fiji Chat JAR。
 - 为耗时模型请求统一配置响应超时。
 - 兼容多模态消息，并在需要时规范化图像工具结果。
 - 可调整这四个服务商的助手工具调用轮数上限。
-- 附带二十一组本地验证，无须真实 API 密钥。
+- 附带二十四组本地验证，无须真实 API 密钥。
 
 | 服务商 | API 地址 | 协议 | 模型获取方式 |
 | --- | --- | --- | --- |
@@ -119,8 +123,7 @@ Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.7、LangChain4j 1.21.0。
    安装 Fiji Chat。目前使用名为 Fiji-chat 的更新站点：
    https://sites.imagej.net/Fiji-chat/ 。
 2. 保存工作并正常关闭 Fiji。
-3. 从 [Releases 页面](https://github.com/liuhaoqiu/fiji-llm-provider/releases)
-   下载 fiji-llm-provider-0.5.12.jar。可用同版本 SHA256SUMS.txt 核对文件。
+3. 从 [GitHub 发布页面](https://github.com/liuhaoqiu/fiji-llm-provider/releases)下载 fiji-llm-provider-0.5.17.jar。可用同版本 SHA256SUMS.txt 核对文件。
 4. 把 JAR 放入 **Fiji 安装目录中的 jars 文件夹**。
    保留属于 Fiji Chat 本体的 fiji-llm-*.jar。
 5. 升级时将旧版 fiji-llm-provider-*.jar 或 fiji-deepseek-provider-*.jar
@@ -164,7 +167,7 @@ Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.7、LangChain4j 1.21.0。
 
 打开 **Help > Assistants > LLM Execution Settings...**：
 
-- 0.5.12 的默认值为 **每条用户消息 1000 轮**，可保存其他正整数。
+- 0.5.13 的默认值为 **每条用户消息 1000 轮**，可保存其他正整数。
 - 模型一次回复中包含多个工具调用，仍只计一轮；界面显示的工具使用次数可能不同。
 - 保存后重新打开 Fiji Chat，使已有助手采用新值；运行中的请求保留开始时的上限。
 - 每条新用户消息获得新的轮数预算。到达上限仍会结束当前调用；
@@ -212,8 +215,8 @@ DeepSeek 默认请求体限制为 48 MiB，与 1M token 窗口分别管理。
 
     pwsh -NoProfile -File ./build.ps1 -FijiRoot "C:/path/to/Fiji" -JdkHome "C:/path/to/jdk-21"
 
-脚本使用已安装的依赖编译，二十一组验证全部通过后才生成
-build/fiji-llm-provider-0.5.12.jar。超时测试会刻意等待至少 65 秒。
+脚本使用已安装的依赖编译，二十四组验证全部通过后才生成
+build/fiji-llm-provider-0.5.17.jar。超时测试会刻意等待至少 65 秒。
 测试使用本地服务器和合成模型，不操作已打开图像，也不更改已保存的轮数设置。
 详见[构建说明](docs/zh-CN/BUILDING.md)。
 

@@ -91,6 +91,13 @@ public final class MacroExecutionService extends AbstractService implements
 	private EnvironmentSnapshotService environmentSnapshotService;
 
 	private volatile boolean macroActive;
+    private volatile Execution activeMacro;
+    private volatile DelegatedRun delegated;
+    private static final class DelegatedRun {
+        final ScriptID id; final String name;
+        volatile JsonObject result;
+        DelegatedRun(ScriptID id,String name){this.id=id;this.name=name;}
+    }
 
     @Override public void initialize() { CommandBridge.register(getContext()); }
 	private final AsyncRunRegistry<RunKind, Execution> executions = new AsyncRunRegistry<>();
@@ -103,16 +110,33 @@ public final class MacroExecutionService extends AbstractService implements
 		if (scriptID == null) throw new IllegalArgumentException(
 			"scriptID cannot be null");
 		if (kind == null) throw new IllegalArgumentException("run kind cannot be null");
+        JsonObject busy = busy(scriptID,kind);
+        if(busy!=null)return ()->busy.deepCopy();
         if (kind != RunKind.MACRO) {
-            if (macroActive) throw new IllegalStateException("A macro run is already active; wait for its terminal status.");
-            return original.run(scriptID, kind, returnWhenBlocked);
+            final String name;
+            try{name=UiAutomationTools.edt(()->ScriptContextUtilities.buildScriptContextItem(scriptID.editorIndex,scriptID.tabIndex).getScriptName());}
+            catch(Exception unavailable){return original.run(scriptID,kind,returnWhenBlocked);}
+            DelegatedRun slot=new DelegatedRun(scriptID,name);
+            synchronized(this){
+                if(delegated!=null||macroActive){JsonObject conflict=busyResult(scriptID,kind,delegated,activeMacro);return ()->conflict.deepCopy();}
+                delegated=slot;
+            }
+            try{
+                JsonObject result=original.run(scriptID,kind,returnWhenBlocked).toJson();slot.result=result.deepCopy();
+                if(terminal(result))delegated=null;
+                return ()->result.deepCopy();
+            }catch(RuntimeException failure){if(delegated==slot)delegated=null;throw failure;}
         }
 
 
 		final Execution execution = new Execution(newRunID(),
 			scriptID, kind);
-		executions.start(kind, execution.runID, execution);
-        macroActive = true;
+        synchronized(this){
+            if(delegated!=null){JsonObject conflict=busyResult(scriptID,kind,delegated,null);return ()->conflict.deepCopy();}
+            executions.start(kind, execution.runID, execution);
+            macroActive = true;
+            activeMacro = execution;
+        }
 
 		final Thread startupThread = new Thread(() -> {
 			try {
@@ -147,7 +171,12 @@ public final class MacroExecutionService extends AbstractService implements
 	public ScriptExecutionService.ExecutionResult status(final String runID, final RunKind expectedKind) {
 		if (runID == null || runID.isBlank()) return null;
 		final Execution execution = executions.get(runID);
-		if (execution == null) return original.status(runID, expectedKind);
+		if (execution == null) {
+            var result=original.status(runID,expectedKind);if(result==null)return null;
+            JsonObject value=result.toJson();DelegatedRun slot=delegated;
+            if(slot!=null&&slot.result!=null&&runID.equals(text(slot.result,"run_id"))){slot.result=value.deepCopy();if(terminal(value))delegated=null;}
+            return ()->value.deepCopy();
+        }
         if (execution.kind != expectedKind) return null;
 		if (execution.startupComplete && (execution.status == Status.RUNNING ||
 			execution.status == Status.BLOCKED_BY_DIALOG))
@@ -156,6 +185,46 @@ public final class MacroExecutionService extends AbstractService implements
 		}
 		return execution.snapshot();
 	}
+
+    private JsonObject busy(ScriptID requested,RunKind kind){
+        DelegatedRun slot=delegated;
+        if(slot!=null&&slot.result!=null){
+            String run=text(slot.result,"run_id");
+            if(!run.isBlank()){
+                var current=original.status(run,RunKind.SCRIPT);
+                if(current!=null)slot.result=current.toJson();
+                // The original registry expires terminal runs. An expired receipt
+                // must not leave a permanent busy flag in this compatibility view.
+                if(current==null||terminal(slot.result)){if(delegated==slot)delegated=null;slot=null;}
+            }
+        }
+        if(slot!=null||macroActive&&kind!=RunKind.MACRO)return busyResult(requested,kind,slot,activeMacro);
+        // Keep the existing duplicate-macro rejection contract and active run ID.
+        if(macroActive)return null;
+        try{
+            boolean editorBusy=UiAutomationTools.edt(()->TextEditor.instances!=null&&requested.editorIndex>=0&&requested.editorIndex<TextEditor.instances.size()&&!TextEditor.instances.get(requested.editorIndex).getExecutingTasks().isEmpty());
+            if(editorBusy)return busyResult(requested,kind,null,null);
+        }catch(Exception ignored){/* Original preparation reports invalid editor/target. */}
+        return null;
+    }
+    private static JsonObject busyResult(ScriptID requested,RunKind kind,DelegatedRun slot,Execution macro){
+        var result=new JsonObject();result.addProperty("status","busy");result.addProperty("started",false);
+        result.addProperty("script_id",requested.toString());result.addProperty("diagnostic_type","execution_busy");
+        result.addProperty("diagnostic","Script execution was not started because another run is active. Existing work was not cancelled or replayed.");
+        String run=slot!=null&&slot.result!=null?text(slot.result,"run_id"):macro!=null?macro.runID:"";
+        if(slot!=null){result.addProperty("blocking_script_id",slot.id.toString());result.addProperty("blocking_script_name",slot.name);}
+        else if(macro!=null){result.addProperty("blocking_script_id",macro.scriptID.toString());if(macro.scriptName!=null)result.addProperty("blocking_script_name",macro.scriptName);}
+        else result.addProperty("blocking_task_source","Script Editor task; no run_id was registered by this service");
+        if(!run.isBlank()){result.addProperty("blocking_run_id",run);ToolRecommendationUtils.addToolRecommendations(result,slot!=null?"fiji_script_run_status":"fiji_macro_run_status");}
+        return result;
+    }
+    private static String text(JsonObject object,String key){return object!=null&&object.has(key)&&object.get(key).isJsonPrimitive()?object.get(key).getAsString():"";}
+    private static boolean terminal(JsonObject value){return text(value,"status").matches("success|finished_with_warnings|finished_with_errors|infrastructure_error");}
+    static String describeFailure(Throwable failure){
+        var parts=new java.util.ArrayList<String>();var seen=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Throwable,Boolean>());
+        for(Throwable t=failure;t!=null&&seen.add(t)&&parts.size()<8;t=t.getCause())parts.add(t.toString());
+        return String.join("\nCaused by: ",parts);
+    }
 
 	private void start(final Execution execution) throws Exception {
 		final Throwable[] preparationFailure = new Throwable[1];
@@ -450,7 +519,7 @@ public final class MacroExecutionService extends AbstractService implements
 	private void finishWithInfrastructureError(final Execution execution,
 		final Throwable error)
 	{
-		finish(execution, Status.INFRASTRUCTURE_ERROR, error.toString());
+		finish(execution, Status.INFRASTRUCTURE_ERROR, describeFailure(error));
 	}
 
 	private void finish(final Execution execution, final Status status,
@@ -479,6 +548,7 @@ public final class MacroExecutionService extends AbstractService implements
         closeWriters(execution);
         if(execution.imageIdsBefore!=null)execution.imageIdsFinal=execution.imageIdsBefore.observe();
         macroActive = false;
+        if(activeMacro==execution)activeMacro=null;
         executions.complete(execution.runID);
         execution.finished = System.currentTimeMillis();
         if (execution.source != null) ScriptValidation.record(execution.scriptID.toString(), execution.source, execution.runID, status.toString());

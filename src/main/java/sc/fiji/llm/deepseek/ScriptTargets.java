@@ -21,10 +21,16 @@ final class ScriptTargets {
         int dot=name.lastIndexOf('.');if(dot<0||!lang.getExtensions().contains(name.substring(dot+1)))throw new IllegalArgumentException("Filename extension must match language "+language+": "+lang.getExtensions());
         return UiAutomationTools.edt(()->{
             var editor=sc.fiji.llm.ui.TextEditorUtils.getMostRecentVisibleEditor();
-            if(editor==null){editor=new TextEditor(context);editor.setSize(700,500);editor.setVisible(true);}
+            // Script Editor 1.4.3 finishes evalScript using getEditorPane(), rather
+            // than its original pane. Switching that editor to a new tab mid-run
+            // can parse an uninitialized highlighter ("Writer is null"). Keep the
+            // running editor's selected pane intact when creating another script.
+            boolean separate=editor!=null&&!editor.getExecutingTasks().isEmpty();
+            if(editor==null||separate){editor=new TextEditor(context);editor.setSize(700,500);editor.setVisible(true);}
             editor.newTab(content,language);editor.getEditorPane().setFileName(name);sc.fiji.llm.ui.TextEditorUtils.recordLastFocusedEditor(editor);
             int ei=TextEditor.instances.indexOf(editor),ti=sc.fiji.llm.ui.TextEditorUtils.getTabIndex(editor,editor.getTab());
-            var out=read(new ScriptID(ei,ti).toString());out.remove("content");out.addProperty("language",language);out.addProperty("is_active",true);out.addProperty("saved_to_disk",false);return out;
+            var out=read(new ScriptID(ei,ti).toString());out.remove("content");out.addProperty("language",language);out.addProperty("is_active",true);out.addProperty("saved_to_disk",false);
+            if(separate)out.addProperty("editor_placement","separate_window_existing_editor_running");return out;
         });
     }
 
@@ -79,7 +85,7 @@ final class ScriptTargets {
         out.add("script_execution_evidence",evidence(item));return out;
     }
     private static JsonObject evidence(ScriptContextItem item){
-        var out=ScriptValidation.evidence(item.getId().toString(),item.getScriptBody());
+        var out=ScriptValidation.evidence(item.getId().toString(),item.getScriptBody(),ScriptExecutionService.isMacroScript(item.getScriptName()));
         out.addProperty("script_name",item.getScriptName());return out;
     }
 }

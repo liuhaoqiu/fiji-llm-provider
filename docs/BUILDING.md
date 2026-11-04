@@ -29,10 +29,10 @@ Java processes with synthetic inputs and loopback HTTP servers.
 
 ## Build outputs
 
-After all twenty-one suites pass, the output is:
+After all twenty-four suites pass, the output is:
 
 ```text
-build/fiji-llm-provider-0.5.12.jar
+build/fiji-llm-provider-0.5.17.jar
 ```
 
 Intermediate classes and Java argument files are kept under a fresh
@@ -48,6 +48,9 @@ using a different JDK or upstream dependency set may produce different bytes.
 
 | Suite | Coverage |
 | --- | --- |
+| `MultimodalActivityVerificationMain` | Actual image/multipart AI-service callbacks, content preservation and final output |
+| `DisplayIsolationVerificationMain` | Injected presentation failure isolation |
+| `StatusVerificationMain` | Busy/startup causes, evidence coverage and real Groovy editor lifecycle |
 | `EngineeringVerificationMain` | Nested execution errors, stable editor targets and bounded command waiting |
 | `DeliveryVerificationMain` | Bound create/replace tools, macro image IDs and exact analysis bundle round trips |
 | `WorkflowVerificationMain` | Real command and macro bridges, explicit inputs, source-bound label measurements, CSV/QC immutability and script-version evidence |

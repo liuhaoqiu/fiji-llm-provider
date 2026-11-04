@@ -77,6 +77,15 @@ final class ProgressAssistant {
                 context.archive.delta("display", text); emit(text);
             });
             boolean waitShown;
+            void observeDisplay(Runnable observation){
+                try{observation.run();}
+                catch(RuntimeException | LinkageError | AssertionError failure){
+                    // Optional plugin presentation must not abort tool-result
+                    // delivery or the next model round. Keep core callbacks out
+                    // of this guard: actual tool/API failures remain failures.
+                    System.err.println("[Fiji LLM Provider] Optional display callback failed: "+failure.getClass().getSimpleName());
+                }
+            }
             final StreamingHandle handle = new StreamingHandle() {
                 public void cancel() {
                     context.cancelled = true; activity.close();
@@ -107,7 +116,7 @@ final class ProgressAssistant {
                     thinkingWithContext.accept(new PartialThinking(detail), new PartialThinkingContext(handle));
                 else if (thinking != null) thinking.accept(new PartialThinking(detail));
                 if (!waitShown) {
-                    waitShown = true;
+                    waitShown=true;
                     presentation.stage("**插件状态 / Plugin status**：等待 API 输出或工具返回；尚无新的已确认进展。等待详情见运行日志。");
                 }
             }
@@ -184,13 +193,13 @@ final class ProgressAssistant {
                         });
                         delegate.beforeToolExecution(tool -> {
                             if (terminal.get()) return;
-                            activity.toolStarted(tool.request().id(), tool.request().name());
+                            observeDisplay(()->activity.toolStarted(tool.request().id(), tool.request().name()));
                             if (beforeTool != null) beforeTool.accept(tool);
                         });
                         delegate.onToolExecuted(tool -> {
                             if (terminal.get()) return;
-                            activity.toolFinished(tool.request().id(), tool.request().name());
-                            presentation.tool(tool);
+                            observeDisplay(()->activity.toolFinished(tool.request().id(), tool.request().name()));
+                            observeDisplay(()->presentation.tool(tool));
                             if (afterTool != null) afterTool.accept(tool);
                         });
                         delegate.onPartialToolCallWithContext((part, ctx) -> {

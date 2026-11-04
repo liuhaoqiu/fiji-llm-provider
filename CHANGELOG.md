@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.5.17
+
+Includes the reviewed local 0.5.13–0.5.16 changes; those versions were not separate public releases. See [release notes](docs/releases/v0.5.17.md), including observed task timings.
+
+One-line display fix: preserve literal angle-bracket identifiers in bounded error reasons.
+
+## 0.5.16 (local)
+
+Presentation-only: distinguish explicit error_dialog from normal blocked input; retain bounded reasons, deduplication and terminal state handling.
+
+## 0.5.15 (local rollback)
+
+Remove the 0.5.13 background receipt parser; restore the original activity monitor and isolate optional display callbacks with real fault-injection regressions.
+
+## 0.5.14 (local)
+
+Fix the 0.5.13 image/multipart result regression in the activity callback. Use resultContents() without mutating downstream payloads; add real streaming image-tool regressions.
+
+## 0.5.13 (local)
+
+- Report busy execution identity and retain startup causes.
+- Label ordinary-script exact-byte evidence as not monitored.
+- Create scripts in another window when the original editor has active tasks, avoiding the reproduced Writer-is-null trigger.
+- Distinguish last reported asynchronous execution from API/tool wait state.
+
+
 ## 0.5.12
 
 - Bind existing script create/replace tools to filename/language and stable handle/hash; no active-tab replacement fallback.

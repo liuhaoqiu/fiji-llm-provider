@@ -20,8 +20,8 @@ Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.7、LangChain4j 1.21.0 上构建并验证�
 ## 安装发行版 JAR
 
 1. 保存图像、脚本和分析结果，然后正常关闭 Fiji。
-2. 从项目的 [Releases 页面](https://github.com/liuhaoqiu/fiji-llm-provider/releases)
-   下载 fiji-llm-provider-0.5.12.jar；可同时下载 SHA256SUMS.txt。
+2. 从项目 [GitHub 发布页面](https://github.com/liuhaoqiu/fiji-llm-provider/releases/tag/v0.5.17)下载
+   fiji-llm-provider-0.5.17.jar 和 SHA256SUMS.txt。
 3. 找到 Fiji 安装目录，其中应包含启动程序和 jars 文件夹。
 4. 将下载的 JAR 复制到 jars 文件夹。
 5. 只保留一个启用的扩展版本。将旧版 fiji-llm-provider-*.jar 和
@@ -35,7 +35,7 @@ Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.7、LangChain4j 1.21.0 上构建并验证�
 
 Windows 用户可用 PowerShell 计算校验值：
 
-    Get-FileHash -Algorithm SHA256 -LiteralPath ./fiji-llm-provider-0.5.12.jar
+    Get-FileHash -Algorithm SHA256 -LiteralPath ./fiji-llm-provider-0.5.17.jar
 
 与同版本 SHA256SUMS.txt 中相应文件的值比较。源码 ZIP 用于查看或构建项目，
 不要将它复制进 jars。

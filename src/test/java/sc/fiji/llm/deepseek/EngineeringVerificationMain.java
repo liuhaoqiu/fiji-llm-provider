@@ -20,7 +20,7 @@ public final class EngineeringVerificationMain {
     static void check(boolean yes,String reason){if(!yes)throw new AssertionError(reason);}
     public static void main(String[] args)throws Exception{
         try{
-            nestedStatuses();waiting();
+            nestedStatuses();dialogStatuses();literalReasons();waiting();
             if(args.length>0)editTargets();
             System.out.println("PASS: nested script failures/success/warnings and deduplication; bounded completion/error/timeout/cancellation waits without replay or EDT blocking");
             Runtime.getRuntime().halt(0);
@@ -47,6 +47,43 @@ public final class EngineeringVerificationMain {
     }
     static String pending(FutureTask<JsonObject> future){
         String id="engineering-"+UUID.randomUUID();WorkflowTools.jobs.put(id,new WorkflowTools.Job(System.currentTimeMillis(),Set.of(),future));return id;
+    }
+    static void dialogStatuses(){
+        var body=new StringBuilder();var display=new StagePresentation(body::append);
+        String input="{\"run_id\":\"dialog\",\"script_name\":\"fixture.ijm\",\"status\":\"blocked_by_dialog\"}";
+        display.tool(execution(input));
+        check(body.toString().contains("Execution waiting for a dialog")&&!body.toString().contains("Execution error;"),"ordinary input dialog must not be called an error");
+        String error="{\"run_id\":\"dialog\",\"script_name\":\"fixture.ijm\",\"status\":\"blocked_by_dialog\",\"error_dialog\":\"Undefined identifier in line 40\\nprint(d3s(1));\"}";
+        display.tool(execution(error));display.tool(execution(error));
+        check(body.toString().contains("Execution error; waiting for error dialog dismissal")&&body.toString().contains("Undefined identifier in line 40"),"explicit macro error dialog must show cause and remain blocked, including transition from normal dialog");
+        check(body.indexOf("Execution error;")==body.lastIndexOf("Execution error;"),"repeated error-dialog polls must not spam progress");
+        display.tool(execution("{\"ran_script\":{\"run_id\":\"nested\",\"status\":\"blocked_by_dialog\",\"error_dialog\":\"Array or string expected\"}}"));
+        check(body.toString().contains("Array or string expected"),"nested receipts supported");
+        var longError=new com.google.gson.JsonObject();longError.addProperty("run_id","long");longError.addProperty("status","blocked_by_dialog");longError.addProperty("error_dialog","x".repeat(5000));int before=body.length();display.tool(execution(longError.toString()));
+        check(body.length()-before<650,"public reason stays bounded while original result remains intact");
+        display.tool(execution("{\"run_id\":\"dialog\",\"status\":\"success\",\"error_dialog\":\"stale field\"}"));
+        check(body.toString().contains("Execution finished: success")&&!body.toString().contains("stale field"),"terminal state remains authoritative");
+        for(String empty:List.of("\"\"","null","{}")){
+            var plain=new StringBuilder();new StagePresentation(plain::append).tool(execution("{\"run_id\":\"empty\",\"status\":\"blocked_by_dialog\",\"error_dialog\":"+empty+"}"));
+            check(plain.toString().contains("Execution waiting for a dialog")&&!plain.toString().contains("Execution error;"),"empty or nontext error field is not a confirmed error");
+        }
+        System.out.println("PASS: explicit macro error-dialog cause, ordinary-dialog distinction, nested receipts, bounded detail, deduplication and unchanged terminal states");
+    }
+    static void literalReasons()throws Exception{
+        var render=sc.fiji.llm.ui.ChatMessagePanel.class.getDeclaredMethod("renderMarkdownToSafeHtml",String.class);render.setAccessible(true);
+        String reason="Undefined identifier: <getBitDepth> <contains> <analysisId> &lt;literal&gt; *stars* [link](https://example.invalid/) `quote`";
+        for(String field:List.of("error_dialog","diagnostic","errors")){
+            var value=new JsonObject();value.addProperty("run_id",field);
+            value.addProperty("status",field.equals("error_dialog")?"blocked_by_dialog":"finished_with_errors");value.addProperty(field,reason);
+            var result=execution(value.toString());
+            var body=new StringBuilder();new StagePresentation(body::append).tool(result);
+            String html=(String)render.invoke(null,body.toString());var doc=org.jsoup.Jsoup.parse(html);
+            String shown=doc.select("code").text();
+            check(shown.contains(reason.replace('`','\'')),"actual chat renderer must retain literal diagnostic: "+field+" got "+shown);
+            check(doc.select("a").isEmpty(),"diagnostic must not become a Markdown link");
+            check(result.result().equals(value.toString()),"original tool receipt is unchanged");
+        }
+        System.out.println("PASS: actual chat HTML rendering retains angle-bracket identifiers, entity text and Markdown punctuation in error_dialog/diagnostic/errors; original receipts unchanged");
     }
     static void waiting()throws Exception{
         var calls=new AtomicInteger();var finish=new CountDownLatch(1);
