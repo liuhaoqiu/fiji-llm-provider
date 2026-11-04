@@ -1,39 +1,19 @@
-# Release verification: 0.5.8
+# Release verification: 0.5.9
 
 **English** | [简体中文](zh-CN/VERIFICATION.md)
 
-Sixteen local suites passed using the release build script. The new presentation
-suite runs the actual LangChain4j AI-service loop with deterministic streaming
-responses, real tool execution, and Fiji's installed ChatMessagePanel.
-It checks that a milestone is visible before the next model/tool round; public
-intermediate messages and reporting-tool updates remain in the body; raw thinking
-and tool payloads stay folded; repeated running polls are deduplicated; and the
-final report is separately headed and delivered once. Display text and activity
-are round-tripped through Fiji's serialized conversation-message schema and
-shown in a reopened panel. Final model memory stays unchanged.
+All **18 local suites** passed, followed by both optional GUI checks in isolated JVMs. The ordinary-executor regression reproduces the installed 0.5.8 wait, then verifies that 0.5.9 finishes while the pool remains reusable. Active and queued tasks, delayed scheduled work and unknown child threads remain awaited.
 
-Other checks cover assistant-local reporting and validation, one presentation
-instruction per request, Fiji cancellation handles, context-compaction display,
-unfinished public drafts on transport failure, per-chat task retention, all four
-providers, model catalogs, multimodal transport, real 1000/1001 round boundaries
-and delayed/idle streams. The small-budget fixture reserves room for the new
-presentation instruction before exercising context growth over actual tools.
+Actual Swing/AWT tests reproduce ambiguous same-title dialogs through the original Fiji tool, then select one by stable ID, reject stale IDs, commit/read back a numeric model and commit edited text before OK. Actual ImageJ image windows verify one pending save prompt per close run, explicit temporary-image discard, actual closure and unchanged source pixels/modified state. Command metadata is checked against the installed Cellpose Appose 0.1.24 SAM command without running it.
 
-Additional real editor/module GUI checks passed, including the inherited stack
-selector, consecutive macros, a 31-second wait, duplicates and input/error dialogs.
-The macro execution classes are byte-identical to the verified 0.5.7 JAR. Actual
-Cellpose inference was not repeated for this presentation change; the preceding
-large-RGB Cellpose result is recorded in the [0.5.7 report](releases/v0.5.7-verification.md).
-No hosted inference, API key or private image was used in this release's tests.
+The existing 16 suites also pass: presentation/history and cancellation, context budgets and task retention, four provider transports/catalogs, real 1000/1001 tool-round boundaries and 65-second delayed responses. The budget fixture derives room from actual instructions/tool definitions before exercising growth. Real editor/module integration includes consecutive runs, inherited stack selectors, input/error dialogs and a 31-second macro wait.
 
-JAR SHA-256: `83b55decbf150bd942459fa11a25726d043468f96397d3b215238f33a31a0681`
+No hosted inference, API key or private image was used. Actual Cellpose inference was not rerun for this change; segmentation/model accuracy and live hosted-model adoption of the new tools are not certified. See [automation compatibility](AUTOMATION.md) and [0.5.8 verification](releases/v0.5.8-verification.md).
+
+JAR SHA-256: `2990a0cfe3eb0fac6ad271554d1c88d6273e738679e9cecd55ba06f5dabe9823`
 
 Unmodified Fiji Chat SHA-256: `4d9925076bb17fb02cb10830b6385d44101edc90ab28b9d967c21a02e03a8eca`
 
 Unmodified Script Editor SHA-256: `08f73d26b7cdda0e7f30cc8754ace7c297e6bcbe0ebe365d504315507e850351`
 
-Environment: Windows 11; Fiji/ImageJ 2.18.0 / 1.54p; Fiji Chat 0.2.0-SNAPSHOT;
-Script Editor 1.4.3; Java 21.0.7; LangChain4j 1.21.0; compilation target Java 17.
-The display separates content; it does not validate or rewrite model conclusions.
-Live hosted-model adoption of the new reporting tool was not tested. See
-[chat presentation](CHAT-DISPLAY.md) for behavior and usage.
+Environment: Windows 11, Fiji/ImageJ 2.18.0 / 1.54p, Fiji Chat 0.2.0-SNAPSHOT, Script Editor 1.4.3, Java 21.0.7 and LangChain4j 1.21.0; compilation target Java 17.

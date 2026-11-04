@@ -87,11 +87,21 @@ public final class ContextBudgetVerificationMain {
         } finally { server.stop(0); }
 
         // The real AI-service transformer applies again after tool results.
+        int loopFixtureWindow;
+        try(var probe=new AssistantExecutionVerificationMain.Scenario(0)) {
+            var service=new ProviderAssistantService();
+            AssistantExecutionVerificationMain.wire(service,AssistantExecutionVerificationMain.newProvider("DeepSeek",probe),probe,
+                AssistantExecutionVerificationMain.preferences(new HashMap<>()));
+            service.createAssistant(AssistantExecutionVerificationMain.Assistant.class,"DeepSeek","fixture",null,null).chat("continue the test");
+            // Size only the fixture's header from an actual transformed request.
+            // Then leave deliberately little room for real subsequent tool work.
+            loopFixtureWindow=(int)Math.ceil((RequestBudget.estimatedTokens(probe.observed.get())+200)/0.75);
+        }
         for (boolean streaming : List.of(false, true)) {
             var values = new HashMap<String,Object>();
             // Leave space for the reporting-tool presentation instruction, then
             // exercise actual growth across executed tools before compaction.
-            values.put(AssistantExecutionSettings.INPUT_TOKENS_KEY, 600);
+            values.put(AssistantExecutionSettings.INPUT_TOKENS_KEY, loopFixtureWindow);
             var loopPrefs = AssistantExecutionVerificationMain.preferences(values);
             try (var scenario = new AssistantExecutionVerificationMain.Scenario(80)) {
                 var service = new ProviderAssistantService();

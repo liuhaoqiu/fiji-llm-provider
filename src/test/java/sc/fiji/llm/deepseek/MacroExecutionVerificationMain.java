@@ -56,7 +56,7 @@ public class MacroExecutionVerificationMain {
             check(pending.isAlive(),"unknown waiting child must not be discarded");release.countDown();pending.join(2000);check(!pending.isAlive(),"child release allows completion");
         } finally {maintenance.close();}
     }
-    static void uiChecks(String mode)throws Exception {
+    static Context fixtureContext()throws Exception {
         var required=new java.util.ArrayList<Class<? extends org.scijava.service.Service>>(java.util.List.of(ScriptExecutionService.class,
             org.scijava.platform.PlatformService.class, org.scijava.ui.UIService.class,
             org.scijava.script.ScriptHeaderService.class, org.scijava.batch.BatchService.class,
@@ -68,7 +68,10 @@ public class MacroExecutionVerificationMain {
                 for(var field:type.getDeclaredFields())if(field.getAnnotation(org.scijava.plugin.Parameter.class)!=null && org.scijava.service.Service.class.isAssignableFrom(field.getType()))
                     required.add(field.getType().asSubclass(org.scijava.service.Service.class));
         }
-        Context c=new Context(required);
+        return new Context(required);
+    }
+    static void uiChecks(String mode)throws Exception {
+        Context c=fixtureContext();
         try {
             var svc=c.service(ScriptExecutionService.class);
             check(svc instanceof MacroExecutionService,"SciJava must select extension macro service");

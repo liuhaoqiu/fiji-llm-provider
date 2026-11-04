@@ -22,10 +22,10 @@ identify identical upstream bytes; see [Verification](VERIFICATION.md).
 
 1. Save your images, scripts and analysis results, then close Fiji normally.
 2. From this repository's GitHub **Releases** page, download
-   `fiji-llm-provider-0.5.8.jar` and, optionally, `SHA256SUMS.txt`.
+   `fiji-llm-provider-0.5.9.jar` and, optionally, `SHA256SUMS.txt`.
 3. Locate your Fiji installation directory. It contains the launcher and a
    directory named `jars`.
-4. Copy `fiji-llm-provider-0.5.8.jar` into that `jars` directory.
+4. Copy `fiji-llm-provider-0.5.9.jar` into that `jars` directory.
 5. Keep exactly one active version of this extension. Move older
    `fiji-llm-provider-*.jar` and `fiji-deepseek-provider-*.jar` files outside
    `jars`, or append `.disabled` to their filenames.
@@ -39,7 +39,7 @@ identify identical upstream bytes; see [Verification](VERIFICATION.md).
 Windows users can check the downloaded file with PowerShell:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath .\fiji-llm-provider-0.5.8.jar
+Get-FileHash -Algorithm SHA256 -LiteralPath .\fiji-llm-provider-0.5.9.jar
 ```
 
 Compare the result to the entry for that filename in the release's

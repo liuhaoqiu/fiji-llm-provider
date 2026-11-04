@@ -2,6 +2,12 @@
 
 **English** | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.5.9 — 2026-11-04
+
+- Recognize inherited idle ordinary executor workers while retaining real active, queued, scheduled and unknown child waits. Do not terminate pools.
+- Add stable window/control IDs, committed numeric edits, command-input metadata and tracked, deduplicated image closure.
+- Add two verification suites and isolated actual-dialog/image tests; preserve the three-part presentation, default 1000 rounds and licenses.
+
 ## 0.5.8 — 2026-11-04
 
 - Display public milestones in the chat body, retain folded thinking/tool details, and separate the final report with its own heading.

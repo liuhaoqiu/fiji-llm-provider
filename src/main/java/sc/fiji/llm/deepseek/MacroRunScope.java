@@ -31,6 +31,7 @@ final class MacroRunScope {
         body.setDaemon(true);
         body.start();
         boolean interrupted = false;
+        boolean idlePass = false;
         // Interrupting a waiting caller must not release the single-run gate
         // while ImageJ commands or real child threads are still executing.
         while (true) {
@@ -44,7 +45,11 @@ final class MacroRunScope {
                 try { children[i].join(50); }
                 catch (InterruptedException e) { interrupted = true; }
             }
-            if (pending == 0 && !body.isAlive()) break;
+            if (pending == 0 && !body.isAlive()) {
+                if(idlePass)break;
+                idlePass=true;
+                try{Thread.sleep(10);}catch(InterruptedException e){interrupted=true;}
+            }else idlePass=false;
         }
         if (interrupted) Thread.currentThread().interrupt();
         if (failure.get() != null) throw new CompletionException(failure.get());
@@ -68,6 +73,7 @@ final class MacroRunScope {
 
     static boolean idleMaintenanceWorker(Thread thread) {
         if (idleSharedWorker(thread)) return true;
+        if (idleExecutorWorker(thread)) return true;
         // ImageJ's StackWindow starts a long-lived slice-selector event loop
         // on the thread group that creates the image window. Its Object.wait
         // is a UI idle state, not pending macro computation. Do not use the
@@ -80,6 +86,28 @@ final class MacroRunScope {
                 (frame.getMethodName().equals("wait") || frame.getMethodName().equals("wait0"))) objectWait = true;
             if (objectWait && frame.getClassName().equals("ij.gui.StackWindow") &&
                 frame.getMethodName().equals("run")) return true;
+        }
+        return false;
+    }
+
+    /** A completed executor job leaves its worker waiting for the next job.
+     * Recognize the actual getTask/runWorker boundary and standard untimed
+     * queues, never a thread name or an arbitrary parked task. Delayed queues
+     * remain awaited because a scheduled job may not have become runnable yet. */
+    static boolean idleExecutorWorker(Thread thread) {
+        Thread.State state=thread.getState();
+        if(state!=Thread.State.WAITING && state!=Thread.State.TIMED_WAITING)return false;
+        StackTraceElement[] frames=thread.getStackTrace();
+        boolean queueWait=false;
+        for(int i=0;i<frames.length;i++){
+            String type=frames[i].getClassName(),method=frames[i].getMethodName();
+            if(type.startsWith("java.util.concurrent.ScheduledThreadPoolExecutor")||type.equals("java.util.concurrent.DelayQueue"))return false;
+            if((type.equals("java.util.concurrent.SynchronousQueue")||type.equals("java.util.concurrent.LinkedBlockingQueue")||
+                type.equals("java.util.concurrent.ArrayBlockingQueue")||type.equals("java.util.concurrent.LinkedTransferQueue"))&&
+                (method.equals("take")||method.equals("poll")))queueWait=true;
+            if(type.equals("java.util.concurrent.ThreadPoolExecutor")&&method.equals("getTask"))
+                return queueWait && i+1<frames.length && frames[i+1].getClassName().equals(type)&&frames[i+1].getMethodName().equals("runWorker")&&
+                    (thread.getState()==Thread.State.WAITING||thread.getState()==Thread.State.TIMED_WAITING);
         }
         return false;
     }

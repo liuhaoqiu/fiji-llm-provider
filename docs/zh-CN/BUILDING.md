@@ -22,9 +22,9 @@
 
 ## 输出
 
-十六组验证全部通过后生成：
+十八组验证全部通过后生成：
 
-    build/fiji-llm-provider-0.5.8.jar
+    build/fiji-llm-provider-0.5.9.jar
 
 中间类文件和 Java 参数文件放在新的 build/run-.../ 目录中，避免旧类混入新 JAR。
 编译和测试类路径排除所有已安装的本扩展版本。参数文件用于避开 Windows 命令长度限制。
@@ -32,10 +32,12 @@
 版本号来自 MANIFEST.MF，发行版打包时间固定；.gitattributes 保留资源和许可文件的字节。
 JAR 内包含 LICENSE.txt、NOTICE.txt 及上游许可证。更换 JDK 或依赖组合可能生成不同字节。
 
-## 十六组验证
+## 十八组验证
 
 | 验证程序 | 覆盖范围 |
 | --- | --- |
+| ExecutorWorkerVerificationMain | 普通线程池空闲线程、实际执行/排队/计划任务及未知子线程 |
+| UiAutomationVerificationMain | 数值编辑器与模型提交、范围校验及已安装 Cellpose-SAM 的真实参数元数据 |
 | StagePresentationVerificationMain | 实时阶段正文、真实汇报工具轮次、最终分区、折叠细节、历史重载及取消 |
 | SharedWorkerVerificationMain | 继承线程组的空闲公共池线程、真实计算、无关任务及私有池 |
 | MacroExecutionVerificationMain | 宏子线程等待、异常及控制台维护隔离 |
@@ -77,3 +79,5 @@ ContextBudgetVerificationMain 覆盖上下文控制和聊天面板恢复，详�
 可选 GUI/模块及实际 Cellpose 验证见[宏执行说明](MACRO-EXECUTION.md)。在依赖齐全的 Windows 桌面上，可给构建命令加 `-VerifyMacroIntegration` 或 `-VerifyCellpose`。
 
 可用 `-VerifyCellpose -CellposeFixture "C:\path\to\RGB-image.png"` 对本地 RGB 测试图补验非空 ROI 导出；测试会将副本调整为 3000×3000。图像不打包、不上传。省略图像参数时使用合成大图，可能得到零检出。
+
+`-VerifyMacroIntegration` 也在隔离 JVM 中验证同名对话框、按控件 ID 提交数值、保存提示去重及原图保留。参数元数据测试需要已安装 Cellpose Appose 插件，但不执行推理。

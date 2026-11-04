@@ -29,10 +29,10 @@ Java processes with synthetic inputs and loopback HTTP servers.
 
 ## Build outputs
 
-After all sixteen suites pass, the output is:
+After all eighteen suites pass, the output is:
 
 ```text
-build/fiji-llm-provider-0.5.8.jar
+build/fiji-llm-provider-0.5.9.jar
 ```
 
 Intermediate classes and Java argument files are kept under a fresh
@@ -48,6 +48,8 @@ using a different JDK or upstream dependency set may produce different bytes.
 
 | Suite | Coverage |
 | --- | --- |
+| `ExecutorWorkerVerificationMain` | Ordinary executor idle workers, active/queued/scheduled work and unknown children |
+| `UiAutomationVerificationMain` | Numeric editor/model commit, range checks and actual installed Cellpose-SAM parameter metadata |
 | `StagePresentationVerificationMain` | Live progress, actual reporting-tool rounds, final section, folded details, saved display history and cancellation |
 | `SharedWorkerVerificationMain` | Inherited idle common-pool workers, active work, unrelated tasks and private pools |
 | `MacroExecutionVerificationMain` | Macro child waits, failures and console maintenance isolation |
@@ -92,3 +94,5 @@ Keeping it preserves preferences and existing integrations. See
 Optional GUI/module and actual Cellpose checks are described in [Macro execution](MACRO-EXECUTION.md). Add `-VerifyMacroIntegration` or `-VerifyCellpose` to the build command on a compatible Windows desktop.
 
 Use `-VerifyCellpose -CellposeFixture "C:\path\to\RGB-image.png"` to additionally exercise nonempty ROI export on your own local RGB fixture, resized to 3000×3000. The image is not bundled or uploaded. Without this argument the large fixture is synthetic and may yield zero detections.
+
+`-VerifyMacroIntegration` also checks duplicate-title dialogs, control-ID numeric updates, save-prompt deduplication and source-image retention in an isolated JVM. The metadata fixture requires the installed Cellpose Appose plugin; it does not run inference.
