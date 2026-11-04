@@ -131,6 +131,18 @@ Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.7、LangChain4j 1.21.0。
 普通用户只需安装 JAR，不需要编译或安装源码 ZIP。详细步骤见
 [安装与升级](docs/zh-CN/INSTALLATION.md)。
 
+## API 密钥申请地址
+
+前往对应服务商的控制台申请或创建 API 密钥：
+
+| 服务商 | API 密钥申请页面 |
+| --- | --- |
+| DeepSeek | [申请或管理 API 密钥](https://platform.deepseek.com/api_keys) |
+| 硅基流动 SiliconFlow | [申请或管理 API 密钥](https://cloud.siliconflow.cn/me/account/ak) |
+| NVIDIA | [申请或管理 API 密钥](https://build.nvidia.com/settings/api-keys) |
+
+获取密钥后，在 Fiji 的 **Help → Assistants → Manage API Keys...** 中添加。
+
 ## 首次使用
 
 1. 打开 **Help > Assistants > Manage API Keys...**。

@@ -147,6 +147,18 @@ dependency sets or operating systems. See [compatibility and verification](docs/
 The JAR is the installable artifact. You do not need to compile or install the
 source ZIP to use it. Detailed instructions are in [Installation](docs/INSTALLATION.md).
 
+## Get an API key
+
+Create an API key in the corresponding provider's console:
+
+| Provider | API key application page |
+| --- | --- |
+| DeepSeek | [Create or manage API keys](https://platform.deepseek.com/api_keys) |
+| SiliconFlow | [Create or manage API keys](https://cloud.siliconflow.cn/me/account/ak) |
+| NVIDIA | [Create or manage API keys](https://build.nvidia.com/settings/api-keys) |
+
+Then add the key in Fiji through **Help → Assistants → Manage API Keys...**.
+
 ## First use
 
 1. Open **Help > Assistants > Manage API Keys...**.
