@@ -89,7 +89,9 @@ public final class ContextBudgetVerificationMain {
         // The real AI-service transformer applies again after tool results.
         for (boolean streaming : List.of(false, true)) {
             var values = new HashMap<String,Object>();
-            values.put(AssistantExecutionSettings.INPUT_TOKENS_KEY, 300);
+            // Leave space for the reporting-tool presentation instruction, then
+            // exercise actual growth across executed tools before compaction.
+            values.put(AssistantExecutionSettings.INPUT_TOKENS_KEY, 600);
             var loopPrefs = AssistantExecutionVerificationMain.preferences(values);
             try (var scenario = new AssistantExecutionVerificationMain.Scenario(80)) {
                 var service = new ProviderAssistantService();

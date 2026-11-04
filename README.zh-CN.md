@@ -9,13 +9,22 @@
 助手工具调用轮数上限，默认 **每条用户消息 1000 轮**。它通过 SciJava 服务扩展
 Fiji Chat，无须替换原版 Fiji Chat JAR。
 
-**当前版本：0.5.5。** 这是独立扩展，不是 Fiji 或模型服务商的官方发行版。
+**当前版本：0.5.8。** 这是独立扩展，不是 Fiji 或模型服务商的官方发行版。
 
 
-0.5.5 增加上下文监测与自动整理，保留原始任务和近期补充要求，修复整理后运行活动不显示的问题。
-插件区分等待 API 与等待工具，在可识别的中断或空最终回复后保留暂停检查点；
-并通过官方模型元数据补全硅基流动上下文窗口，包括已核验的 DeepSeek V4.1 Flash 的 1M 窗口。
-详见[发布说明](docs/releases/v0.5.5.zh-CN.md)与[上下文和恢复指南](docs/zh-CN/CONTEXT.md)。
+0.5.8 将展示分成三部分：正文中的阶段进展、原有的折叠运行日志，以及独立标题下的最终报告。
+新增助手内的阶段汇报工具，可发布关键进展，无须额外发起模型总结请求。
+详见[聊天展示说明](docs/zh-CN/CHAT-DISPLAY.md)。
+
+0.5.7 修复 0.5.6 中残留的 Cellpose 收尾等待：JVM 共享并行工作线程可能继承宏的线程组，
+计算完成后仍长期待命。插件根据真实线程池和等待栈识别这些空闲线程，继续等待仍在执行的工作
+及普通宏子线程；同时根据真实等待栈识别 ImageJ 多通道窗口的空闲层选择器。
+其他脚本语言仍使用原执行服务。
+详见[宏执行兼容说明](docs/zh-CN/MACRO-EXECUTION.md)。
+
+保留 0.5.5 的上下文监测、任务保留、自动整理和中断恢复。详见[上下文与恢复](docs/zh-CN/CONTEXT.md)。
+
+详见[0.5.8 发布说明](docs/releases/v0.5.8.zh-CN.md)，包含尚待处理的线程池等待与同名对话框限制。
 
 ## 使用示例
 
@@ -34,7 +43,7 @@ Fiji Chat，无须替换原版 Fiji Chat JAR。
 - 为耗时模型请求统一配置响应超时。
 - 兼容多模态消息，并在需要时规范化图像工具结果。
 - 可调整这四个服务商的助手工具调用轮数上限。
-- 附带十三组本地验证，无须真实 API 密钥。
+- 附带十六组本地验证，无须真实 API 密钥。
 
 | 服务商 | API 地址 | 协议 | 模型获取方式 |
 | --- | --- | --- | --- |
@@ -107,7 +116,7 @@ Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.7、LangChain4j 1.21.0。
    https://sites.imagej.net/Fiji-chat/ 。
 2. 保存工作并正常关闭 Fiji。
 3. 从 [Releases 页面](https://github.com/liuhaoqiu/fiji-llm-provider/releases)
-   下载 fiji-llm-provider-0.5.5.jar。可用同版本 SHA256SUMS.txt 核对文件。
+   下载 fiji-llm-provider-0.5.8.jar。可用同版本 SHA256SUMS.txt 核对文件。
 4. 把 JAR 放入 **Fiji 安装目录中的 jars 文件夹**。
    保留属于 Fiji Chat 本体的 fiji-llm-*.jar。
 5. 升级时将旧版 fiji-llm-provider-*.jar 或 fiji-deepseek-provider-*.jar
@@ -138,7 +147,7 @@ Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.7、LangChain4j 1.21.0。
 
 打开 **Help > Assistants > LLM Execution Settings...**：
 
-- 0.5.5 的默认值为 **每条用户消息 1000 轮**，可保存其他正整数。
+- 0.5.8 的默认值为 **每条用户消息 1000 轮**，可保存其他正整数。
 - 模型一次回复中包含多个工具调用，仍只计一轮；界面显示的工具使用次数可能不同。
 - 保存后重新打开 Fiji Chat，使已有助手采用新值；运行中的请求保留开始时的上限。
 - 每条新用户消息获得新的轮数预算。到达上限仍会结束当前调用；
@@ -186,8 +195,8 @@ DeepSeek 默认请求体限制为 48 MiB，与 1M token 窗口分别管理。
 
     pwsh -NoProfile -File ./build.ps1 -FijiRoot "C:/path/to/Fiji" -JdkHome "C:/path/to/jdk-21"
 
-脚本使用已安装的依赖编译，十三组验证全部通过后才生成
-build/fiji-llm-provider-0.5.5.jar。超时测试会刻意等待至少 65 秒。
+脚本使用已安装的依赖编译，十六组验证全部通过后才生成
+build/fiji-llm-provider-0.5.8.jar。超时测试会刻意等待至少 65 秒。
 测试使用本地服务器和合成模型，不操作已打开图像，也不更改已保存的轮数设置。
 详见[构建说明](docs/zh-CN/BUILDING.md)。
 

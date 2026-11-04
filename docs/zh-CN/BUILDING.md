@@ -22,9 +22,9 @@
 
 ## 输出
 
-十三组验证全部通过后生成：
+十六组验证全部通过后生成：
 
-    build/fiji-llm-provider-0.5.5.jar
+    build/fiji-llm-provider-0.5.8.jar
 
 中间类文件和 Java 参数文件放在新的 build/run-.../ 目录中，避免旧类混入新 JAR。
 编译和测试类路径排除所有已安装的本扩展版本。参数文件用于避开 Windows 命令长度限制。
@@ -32,10 +32,17 @@
 版本号来自 MANIFEST.MF，发行版打包时间固定；.gitattributes 保留资源和许可文件的字节。
 JAR 内包含 LICENSE.txt、NOTICE.txt 及上游许可证。更换 JDK 或依赖组合可能生成不同字节。
 
-## 十三组验证
+## 十六组验证
 
 | 验证程序 | 覆盖范围 |
 | --- | --- |
+| StagePresentationVerificationMain | 实时阶段正文、真实汇报工具轮次、最终分区、折叠细节、历史重载及取消 |
+| SharedWorkerVerificationMain | 继承线程组的空闲公共池线程、真实计算、无关任务及私有池 |
+| MacroExecutionVerificationMain | 宏子线程等待、异常及控制台维护隔离 |
+| TaskRetentionVerificationMain | 原始任务、图像淘汰及独立会话 |
+| StreamStatusVerificationMain | 等待状态、SSE 空闲保护及中途恢复 |
+| ProgressDisplayVerificationMain | 上下文整理后的进度显示 |
+| ContextBudgetVerificationMain | token/请求体上限、整理及恢复 |
 | VerificationMain | 服务商接口契约与 SciJava 发现 |
 | KeyManagerVerificationMain | 真实命令/模块 Future、解锁顺序及取消 |
 | StartupVerificationMain | 本体启动循环、设置和取消回归 |
@@ -64,4 +71,9 @@ SciJava 插件索引位于：
 相关兼容修复的依据见[实现说明](DEVELOPMENT.md)。
 
 
-第十三组 ContextBudgetVerificationMain 覆盖上下文控制和聊天面板恢复，详见[上下文说明](CONTEXT.md)。
+ContextBudgetVerificationMain 覆盖上下文控制和聊天面板恢复，详见[上下文说明](CONTEXT.md)。
+
+
+可选 GUI/模块及实际 Cellpose 验证见[宏执行说明](MACRO-EXECUTION.md)。在依赖齐全的 Windows 桌面上，可给构建命令加 `-VerifyMacroIntegration` 或 `-VerifyCellpose`。
+
+可用 `-VerifyCellpose -CellposeFixture "C:\path\to\RGB-image.png"` 对本地 RGB 测试图补验非空 ROI 导出；测试会将副本调整为 3000×3000。图像不打包、不上传。省略图像参数时使用合成大图，可能得到零检出。

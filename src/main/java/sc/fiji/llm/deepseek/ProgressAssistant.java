@@ -20,6 +20,14 @@ import dev.langchain4j.service.tool.ToolExecution;
  */
 final class ProgressAssistant {
     private ProgressAssistant() {}
+    // Fiji checks Stop in its body callback and preserves a nonempty progress
+    // body there. Send a control-only empty display event while buffering a
+    // model round. PartialResponse's constructor requires nonempty source text;
+    // the public text() override deliberately exposes no body content. This
+    // object is never sent to a model, archived, or stored in chat memory.
+    private static final PartialResponse DISPLAY_CONTROL = new PartialResponse("display-control") {
+        @Override public String text() { return ""; }
+    };
 
     @SuppressWarnings("unchecked")
     static <T> T wrap(Class<T> type, T assistant, BoundedContext context, ChatMemory memory) {
@@ -56,6 +64,7 @@ final class ProgressAssistant {
             Consumer<PartialThinking> thinking;
             BiConsumer<PartialThinking,PartialThinkingContext> thinkingWithContext;
             Consumer<ChatResponse> complete;
+            Consumer<ChatResponse> intermediate;
             Consumer<Throwable> error;
             Consumer<BeforeToolExecution> beforeTool;
             Consumer<ToolExecution> afterTool;
@@ -64,6 +73,9 @@ final class ProgressAssistant {
             volatile StreamingHandle upstreamHandle;
             final AtomicBoolean terminal = new AtomicBoolean();
             final StreamActivity activity = new StreamActivity(this::emitWait);
+            final StagePresentation presentation = new StagePresentation(text -> {
+                context.archive.delta("display", text); emit(text);
+            });
             boolean waitShown;
             final StreamingHandle handle = new StreamingHandle() {
                 public void cancel() {
@@ -86,7 +98,7 @@ final class ProgressAssistant {
                 else if (thinking != null) thinking.accept(new PartialThinking(detail));
                 // A short factual stage output remains visible in the answer
                 // pane without pushing the activity area off-screen.
-                emit("\n\n" + context.stageSummary() + "\n\n");
+                presentation.stage("较早的上下文已整理，继续执行当前任务；完整记录保留在本地。 / Older context compacted; the current task continues. Full records remain local.");
             }
             void emitWait(String detail) {
                 if (terminal.get() || context.cancelled) { activity.close(); return; }
@@ -96,11 +108,12 @@ final class ProgressAssistant {
                 else if (thinking != null) thinking.accept(new PartialThinking(detail));
                 if (!waitShown) {
                     waitShown = true;
-                    emit("\n\n**插件状态 / Plugin status**：等待 API 输出或工具返回；尚无新的已确认进展。等待详情见运行日志。\n\n");
+                    presentation.stage("**插件状态 / Plugin status**：等待 API 输出或工具返回；尚无新的已确认进展。等待详情见运行日志。");
                 }
             }
             void stopMonitoring() {
                 activity.close(); context.requestStarting = () -> {};
+                context.stageOutput = text -> {};
             }
             void failed(Throwable failure) {
                 if (!terminal.compareAndSet(false, true)) return;
@@ -111,7 +124,7 @@ final class ProgressAssistant {
                     AiMessage paused = AiMessage.from(checkpoint);
                     context.archive.store(paused);
                     if (memory != null) memory.add(paused);
-                    emit("\n\n" + checkpoint);
+                    presentation.finish(checkpoint, true);
                     if (complete != null) complete.accept(ChatResponse.builder().aiMessage(paused).build());
                 } else if (error != null) error.accept(failure);
             }
@@ -121,7 +134,7 @@ final class ProgressAssistant {
                         partial = (Consumer<String>) args[0];
                         delegate.onPartialResponse(text -> {
                             if (terminal.get()) return;
-                            activity.output(); context.archive.delta("text", text); partial.accept(text);
+                            activity.output(); context.archive.delta("text", text); presentation.partial(text);
                         });
                         return proxy;
                     }
@@ -130,7 +143,8 @@ final class ProgressAssistant {
                         delegate.onPartialResponseWithContext((part, ctx) -> {
                             if (terminal.get()) return;
                             upstreamHandle = ctx.streamingHandle(); activity.output();
-                            context.archive.delta("text", part.text()); partialWithContext.accept(part, ctx);
+                            context.archive.delta("text", part.text()); presentation.partial(part.text());
+                            partialWithContext.accept(DISPLAY_CONTROL, new PartialResponseContext(handle));
                         }); return proxy;
                     case "onPartialThinkingWithContext": {
                         thinkingWithContext = (BiConsumer<PartialThinking,PartialThinkingContext>) args[0];
@@ -149,6 +163,7 @@ final class ProgressAssistant {
                         }); return proxy;
                     }
                     case "onCompleteResponse": complete = (Consumer<ChatResponse>) args[0]; return proxy;
+                    case "onIntermediateResponse": intermediate = (Consumer<ChatResponse>) args[0]; return proxy;
                     case "onError": error = (Consumer<Throwable>) args[0]; return proxy;
                     case "ignoreErrors": error = ignored -> {}; return proxy;
                     case "beforeToolExecution": beforeTool = (Consumer<BeforeToolExecution>) args[0]; return proxy;
@@ -158,9 +173,15 @@ final class ProgressAssistant {
                         partialToolWithContext = (BiConsumer<PartialToolCall,PartialToolCallContext>) args[0]; return proxy;
                     case "start": {
                         context.progress = this::emitProgress;
+                        context.stageOutput = presentation::stage;
                         context.requestStarting = activity::request;
                         ContextMonitor.watch(activity::status);
                         activity.start();
+                        delegate.onIntermediateResponse(response -> {
+                            if (terminal.get()) return;
+                            presentation.intermediate(response.aiMessage() == null ? null : response.aiMessage().text());
+                            if (intermediate != null) intermediate.accept(response);
+                        });
                         delegate.beforeToolExecution(tool -> {
                             if (terminal.get()) return;
                             activity.toolStarted(tool.request().id(), tool.request().name());
@@ -169,6 +190,7 @@ final class ProgressAssistant {
                         delegate.onToolExecuted(tool -> {
                             if (terminal.get()) return;
                             activity.toolFinished(tool.request().id(), tool.request().name());
+                            presentation.tool(tool);
                             if (afterTool != null) afterTool.accept(tool);
                         });
                         delegate.onPartialToolCallWithContext((part, ctx) -> {
@@ -196,6 +218,7 @@ final class ProgressAssistant {
                             if (!terminal.compareAndSet(false, true)) return;
                             stopMonitoring();
                             context.archive.store(response.aiMessage());
+                            presentation.finish(message.text(), false);
                             if (complete != null) complete.accept(response);
                         });
                         delegate.onError(this::failed);

@@ -96,8 +96,9 @@ public final class ProgressDisplayVerificationMain {
         for(int i=0;i<5;i++) check(log.toString().contains("AFTER_COMPACTION_MARKER_"+i), "post-compaction thinking keeps arriving");
         check(panel.getText().contains("FINAL_ANSWER_MARKER") && finished.get()==1 && calls.get()==5,
             "stage notices do not complete the stream or suppress its final answer");
-        check(panel.getText().contains("42") && panel.getText().contains("pending"),
-            "short stage output reflects a returned result without asserting validation");
+        check(panel.getText().contains("阶段进展 / Progress") && panel.getText().contains("最终报告 / Final report") &&
+            !panel.getText().contains("validation") && panel.getText().indexOf("阶段进展 / Progress")<panel.getText().indexOf("最终报告 / Final report"),
+            "compaction remains a concise stage notice; raw result JSON stays out of the body");
         check(!panel.getActivity().isEmpty(), "activity record retained after completion");
         check(panel.getActivity().getSteps().stream().filter(step -> !step.isThinking() &&
             step.getTool().startsWith("POST_COMPACTION_TOOL_")).count()==5, "post-compaction tool events remain in the displayed activity record");

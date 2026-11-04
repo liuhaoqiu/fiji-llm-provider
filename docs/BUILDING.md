@@ -29,10 +29,10 @@ Java processes with synthetic inputs and loopback HTTP servers.
 
 ## Build outputs
 
-After all ten suites pass, the output is:
+After all sixteen suites pass, the output is:
 
 ```text
-build/fiji-llm-provider-0.5.5.jar
+build/fiji-llm-provider-0.5.8.jar
 ```
 
 Intermediate classes and Java argument files are kept under a fresh
@@ -48,6 +48,13 @@ using a different JDK or upstream dependency set may produce different bytes.
 
 | Suite | Coverage |
 | --- | --- |
+| `StagePresentationVerificationMain` | Live progress, actual reporting-tool rounds, final section, folded details, saved display history and cancellation |
+| `SharedWorkerVerificationMain` | Inherited idle common-pool workers, active work, unrelated tasks and private pools |
+| `MacroExecutionVerificationMain` | Macro child waits, failures and console maintenance isolation |
+| `TaskRetentionVerificationMain` | Original tasks, image eviction and independent chats |
+| `StreamStatusVerificationMain` | Waiting status, SSE idle protection and partial recovery |
+| `ProgressDisplayVerificationMain` | Progress visibility across context compaction |
+| `ContextBudgetVerificationMain` | Token/body budgets, compaction and recovery |
 | `VerificationMain` | Provider contracts and SciJava discovery |
 | `KeyManagerVerificationMain` | Real command/module futures, unlock sequencing and cancellation |
 | `StartupVerificationMain` | Core startup loop and setup/cancellation regression |
@@ -79,4 +86,9 @@ Keeping it preserves preferences and existing integrations. See
 [Implementation notes](DEVELOPMENT.md) for the rationale behind the compatibility fixes.
 
 
-The tenth suite, `ContextBudgetVerificationMain`, covers the context and UI recovery behavior documented in [Context](CONTEXT.md).
+`ContextBudgetVerificationMain` covers the context and UI recovery behavior documented in [Context](CONTEXT.md).
+
+
+Optional GUI/module and actual Cellpose checks are described in [Macro execution](MACRO-EXECUTION.md). Add `-VerifyMacroIntegration` or `-VerifyCellpose` to the build command on a compatible Windows desktop.
+
+Use `-VerifyCellpose -CellposeFixture "C:\path\to\RGB-image.png"` to additionally exercise nonempty ROI export on your own local RGB fixture, resized to 3000×3000. The image is not bundled or uploaded. Without this argument the large fixture is synthetic and may yield zero detections.

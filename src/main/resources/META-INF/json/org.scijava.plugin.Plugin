@@ -6,3 +6,5 @@
 {"class":"sc.fiji.llm.deepseek.ProviderAssistantService","values":{"priority":100.0,"type":"org.scijava.service.Service"}}
 {"class":"sc.fiji.llm.deepseek.ConfigureAssistantExecution","values":{"menuPath":"Help>Assistants>LLM Execution Settings...","initializer":"initialize","type":"org.scijava.command.Command"}}
 {"class":"sc.fiji.llm.deepseek.ShowContextStatus","values":{"menuPath":"Help>Assistants>LLM Context Status...","type":"org.scijava.command.Command"}}
+
+{"class":"sc.fiji.llm.deepseek.MacroExecutionService","values":{"priority":110.0,"type":"org.scijava.service.Service"}}

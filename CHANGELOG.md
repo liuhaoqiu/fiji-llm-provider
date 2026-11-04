@@ -2,6 +2,29 @@
 
 **English** | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.5.8 — 2026-11-04
+
+- Display public milestones in the chat body, retain folded thinking/tool details, and separate the final report with its own heading.
+- Add assistant-local `fiji_report_progress` and concise presentation instructions for the four providers; no extra inference call is made by the extension.
+- Show intermediate public replies at tool-round boundaries, suppress duplicate running polls, and keep raw context-compaction excerpts in the activity log.
+- Preserve public drafts on transport interruption, cancellation callbacks in Fiji, and progress/history independently of model memory.
+- Add a real AI-service/tool-loop and chat-panel/history regression; sixteen local suites plus optional GUI integration checks. The macro execution implementation, licenses and default 1000 rounds are unchanged.
+
+## 0.5.7 — 2026-11-04
+
+- Fix completed macros waiting forever for inherited idle JVM common-pool workers; retain active and private-pool child waits.
+- Recognize the actual idle ImageJ StackWindow selector loop, which can also inherit the macro group; verify a real window and renamed selector.
+- Add pending-child diagnostics and a cold-process regression reproducing the 0.5.6 defect, including renamed workers, busy workers and unrelated parallel activity.
+- Expand actual Cellpose coverage to 3000×3000 RGB, ROI export, a count table and a subsequent macro. Fifteen local suites plus optional GUI/Cellpose integration checks.
+- Keep context recovery, provider settings, licenses and the default 1000 tool rounds unchanged.
+
+## 0.5.6 — 2026-11-03
+
+- Add a macro-only SciJava execution compatibility service, preserving the original service for other languages.
+- Track actual macro evaluation and child work independently of editor/console maintenance; retain run IDs, dialogs, errors and bounded waits.
+- Reproduce Cellpose's completed-but-running state through the original service and verify a real synthetic Cellpose run completes through the extension.
+- Add consecutive-run, 31-second wait, duplicate, dialog and error regressions; fourteen local suites plus optional integration checks.
+
 ## 0.5.5 — 2026-11-03
 
 - Restore the user task after real TokenWindowChatMemory image eviction, including under-budget requests; retain the initial request and recent follow-ups per chat.

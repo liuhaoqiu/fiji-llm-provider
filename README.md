@@ -10,17 +10,27 @@ API-key manager, and provides a configurable assistant tool-round limit with a
 default of **1000 rounds per user message**. It extends Fiji Chat through SciJava
 services; it does not replace the original Fiji Chat JAR.
 
-**Current version: 0.5.5.** This is an independent extension, not an official
+**Current version: 0.5.8.** This is an independent extension, not an official
 release from Fiji or any model provider.
 
 
-Version 0.5.5 adds context monitoring and automatic compaction, preserves the
-original task and recent follow-ups, and keeps activity visible after compaction.
-It distinguishes idle API waits from running tools and preserves a paused
-checkpoint after recognized interruptions or empty final replies. SiliconFlow
-context windows are supplemented from official model metadata, including 1M for
-the verified DeepSeek V4.1 Flash model. See the [release notes](docs/releases/v0.5.5.md)
-and [context and recovery guide](docs/CONTEXT.md).
+Version 0.5.8 presents ongoing work in three parts: public progress in the
+chat body, the existing collapsible activity log, and a separately headed final
+report. A new assistant-local reporting tool publishes milestones without a
+separate summarization request. See [Chat presentation](docs/CHAT-DISPLAY.md).
+
+Version 0.5.7 fixes a remaining Cellpose completion wait in 0.5.6. Shared JVM
+parallel workers can inherit a macro's thread group and stay alive after their
+work finishes. The extension now recognizes idle common-pool workers by their
+actual pool and wait stack, while still waiting for active work and ordinary
+macro child threads. Idle ImageJ stack-window selector loops are also recognized
+by their actual wait stack. Other script languages retain the original service.
+See [Macro execution compatibility](docs/MACRO-EXECUTION.md).
+
+The context monitoring, task retention, automatic compaction and recovery
+features from 0.5.5 are retained. See [Context and recovery](docs/CONTEXT.md).
+
+See the [0.5.8 release notes](docs/releases/v0.5.8.md), including the remaining executor-pool and duplicate-dialog limitations.
 
 ## Example workflow
 
@@ -41,7 +51,7 @@ assistant conversation.
 - Shared response timeout configuration for long model requests.
 - Multimodal message handling and image-tool normalization where required.
 - A configurable tool-calling round limit for the four added providers.
-- Thirteen local verification suites requiring no live API key.
+- Sixteen local verification suites requiring no live API key, plus optional real macro/Cellpose integration checks.
 
 | Provider | API base | Protocol | Model discovery |
 | --- | --- | --- | --- |
@@ -120,7 +130,7 @@ dependency sets or operating systems. See [compatibility and verification](docs/
    It currently uses the `Fiji-chat` update site at
    `https://sites.imagej.net/Fiji-chat/`.
 2. Save your work and **close Fiji**.
-3. Download `fiji-llm-provider-0.5.5.jar` from the [Releases page](https://github.com/liuhaoqiu/fiji-llm-provider/releases).
+3. Download `fiji-llm-provider-0.5.8.jar` from the [Releases page](https://github.com/liuhaoqiu/fiji-llm-provider/releases).
    Optionally compare its SHA-256 with `SHA256SUMS.txt` in the same release.
 4. Copy the JAR into the **`jars` directory inside your Fiji installation**.
    Do not replace `fiji-llm-*.jar`, which belongs to Fiji Chat itself.
@@ -158,7 +168,7 @@ For Ark endpoint IDs, NVIDIA catalog caveats and example workflows, see
 
 Open **Help > Assistants > LLM Execution Settings...**.
 
-- The default in **0.5.5 is 1000 rounds per user message**.
+- The default in **0.5.8 is 1000 rounds per user message**.
 - You can save any positive integer appropriate to your task.
 - One model reply containing several tool calls counts as **one round**. The
   displayed tool-use count can therefore differ from the round count.
@@ -224,8 +234,8 @@ If the bundled JDK cannot be found, supply it explicitly:
 pwsh -NoProfile -File .\build.ps1 -FijiRoot "C:\path\to\Fiji" -JdkHome "C:\path\to\jdk-21"
 ```
 
-The script compiles against Fiji's installed JARs, runs all thirteen verification
-suites, and writes `build/fiji-llm-provider-0.5.5.jar` only after they pass.
+The script compiles against Fiji's installed JARs, runs all sixteen verification
+suites, and writes `build/fiji-llm-provider-0.5.8.jar` only after they pass.
 The timeout suite deliberately waits at least 65 seconds. Tests use local
 servers and synthetic models/tools; they do not process your open images or
 change your saved tool-round preference. See [Building](docs/BUILDING.md).

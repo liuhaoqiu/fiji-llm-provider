@@ -128,6 +128,7 @@ public final class StreamStatusVerificationMain {
                 if (!m.getName().equals("start")) { if (a!=null && a.length>0) callbacks.put(m.getName(), a[0]); return p; }
                 starts.incrementAndGet();
                 ((Consumer<PartialThinking>)callbacks.get("onPartialThinking")).accept(new PartialThinking("PARTIAL_LOG_RETAINED"));
+                ((Consumer<String>)callbacks.get("onPartialResponse")).accept("UNFINISHED_PUBLIC_DRAFT");
                 ((Consumer<Throwable>)callbacks.get("onError")).accept(new HttpTimeoutException("SSE stream idle timeout"));
                 ((Consumer<Throwable>)callbacks.get("onError")).accept(new IOException("late duplicate failure"));
                 ((Consumer<ChatResponse>)callbacks.get("onCompleteResponse")).accept(ChatResponse.builder().aiMessage(AiMessage.from("LATE_COMPLETION" )).build());
@@ -138,6 +139,7 @@ public final class StreamStatusVerificationMain {
         wrapped.stream("start").onPartialThinking(p -> thinking.append(p.text())).onPartialResponse(text::append)
             .onError(e -> errors.incrementAndGet()).onCompleteResponse(r -> completed.incrementAndGet()).start();
         check(thinking.toString().contains("PARTIAL_LOG_RETAINED"), "partial activity is retained");
+        check(text.toString().contains("UNFINISHED_PUBLIC_DRAFT")&&text.toString().contains("任务暂停 / Task paused"),"interrupted public draft remains visible without being called a final report");
         check(text.toString().contains("Task paused") && text.toString().contains("not completed") &&
             text.toString().contains("macro edited; not rerun yet") && text.toString().contains("No tools were automatically replayed"),
             "factual paused output retains the task and last result");

@@ -5,7 +5,8 @@ Original extension code, tests, build scripts and documentation are provided
 under the unmodified PolyForm Noncommercial License 1.0.0 in LICENSE.txt.
 This notice does not add restrictions or source-disclosure requirements to it.
 
-ProviderAssistantService.java adapts assistant builder wiring from Fiji LLM:
+ProviderAssistantService.java adapts assistant builder wiring, and
+MacroExecutionService.java adapts macro run tracking/reporting, from Fiji LLM:
 https://github.com/fiji/fiji-llm
 Copyright (C) 2025 - 2026 Fiji developers. All rights reserved.
 Those upstream portions retain the BSD 2-Clause license reproduced in

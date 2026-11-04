@@ -3,7 +3,10 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$FijiRoot,
-    [string]$JdkHome
+    [string]$JdkHome,
+    [switch]$VerifyMacroIntegration,
+    [switch]$VerifyCellpose,
+    [string]$CellposeFixture
 )
 $ErrorActionPreference = 'Stop'
 $FijiRoot = (Resolve-Path -LiteralPath $FijiRoot).Path
@@ -75,7 +78,7 @@ Copy-Item -Path (Join-Path $PSScriptRoot 'src\main\resources\*') -Destination $c
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE.txt') -Destination $classes
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'NOTICE.txt') -Destination $classes
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'licenses') -Destination $classes -Recurse
-& (Join-Path $jdkBin 'jar.exe') --create --file $candidateJar --manifest $manifest --date 2026-11-03T00:00:00Z -C $classes .
+& (Join-Path $jdkBin 'jar.exe') --create --file $candidateJar --manifest $manifest --date 2026-11-04T00:00:00Z -C $classes .
 if ($LASTEXITCODE -ne 0) { throw 'Packaging failed.' }
 
 $testSources = @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src\test\java') -Filter '*.java' -File -Recurse |
@@ -89,13 +92,28 @@ $runtimeArguments = Join-Path $runDirectory 'test-classpath.args'
 Write-JavaArgumentFile $runtimeArguments @('--add-opens=java.base/java.lang=ALL-UNNAMED',
     "-Dfiji.llm.contextArchiveRoot=$runDirectory/context-archives",
     '-cp',"$tests;$candidateJar;$dependencyClassPath")
-foreach ($test in @('TaskRetentionVerificationMain','StreamStatusVerificationMain','ProgressDisplayVerificationMain','ContextBudgetVerificationMain','VerificationMain','KeyManagerVerificationMain','StartupVerificationMain',
+foreach ($test in @('StagePresentationVerificationMain','SharedWorkerVerificationMain','MacroExecutionVerificationMain','TaskRetentionVerificationMain','StreamStatusVerificationMain','ProgressDisplayVerificationMain','ContextBudgetVerificationMain','VerificationMain','KeyManagerVerificationMain','StartupVerificationMain',
     'ModelCatalogVerificationMain','MultimodalVerificationMain','TransportVerificationMain',
     'MultiProviderVerificationMain','AssistantExecutionVerificationMain','ProviderTimeoutVerificationMain')) {
     & (Join-Path $jdkBin 'java.exe') "@$runtimeArguments" "sc.fiji.llm.deepseek.$test"
     if ($LASTEXITCODE -ne 0) { throw "Verification failed: $test" }
 }
 
+if ($VerifyMacroIntegration -or $VerifyCellpose) {
+    & (Join-Path $jdkBin 'java.exe') "@$runtimeArguments" sc.fiji.llm.deepseek.MacroExecutionVerificationMain ui
+    if ($LASTEXITCODE -ne 0) { throw 'Macro GUI integration failed.' }
+}
+if ($VerifyCellpose) {
+    & (Join-Path $jdkBin 'java.exe') "@$runtimeArguments" sc.fiji.llm.deepseek.MacroExecutionVerificationMain cellpose
+    if ($LASTEXITCODE -ne 0) { throw 'Actual Cellpose integration failed.' }
+    $fixtureArguments = @()
+    if ($CellposeFixture) {
+        $fixturePath = (Resolve-Path -LiteralPath $CellposeFixture).Path.Replace('\','/')
+        $fixtureArguments = @("-Dfiji.llm.cellposeFixture=$fixturePath")
+    }
+    & (Join-Path $jdkBin 'java.exe') "@$runtimeArguments" @fixtureArguments sc.fiji.llm.deepseek.MacroExecutionVerificationMain large-cellpose
+    if ($LASTEXITCODE -ne 0) { throw 'Large RGB Cellpose integration failed.' }
+}
 Copy-Item -LiteralPath $candidateJar -Destination $outputJar -Force
-Write-Output "All thirteen verification suites passed. Built: $outputJar"
+Write-Output "All sixteen verification suites passed. Built: $outputJar"
 Get-FileHash -LiteralPath $outputJar -Algorithm SHA256

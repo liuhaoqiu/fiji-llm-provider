@@ -73,7 +73,6 @@ public class ProviderAssistantService extends DefaultAssistantService {
         images.setLocalModel(!provider.requiresApiKey());
         var builder = AiServices.builder(assistantInterface)
             .streamingChatModel(provider.createStreamingChatModel(modelName))
-            .tools(tools.getToolsWithExecutors())
             .toolExecutionErrorHandler(tools::handleExecutionError)
             .toolArgumentsErrorHandler(tools::handleArgumentError)
             .chatModel(provider.createChatModel(modelName))
@@ -92,6 +91,7 @@ public class ProviderAssistantService extends DefaultAssistantService {
         context.imageTokenAllowance = providerName.equals("DeepSeek") ? 1024 : 16384;
         ChatMemory workingMemory = chatMemory == null ? null : context.archive.wrap(chatMemory);
         context.workingMemory = workingMemory;
+        builder.tools(StageReporting.tools(tools.getToolsWithExecutors(), context));
 
         builder.chatRequestTransformer(request -> {
             ChatRequest transformed = request;
@@ -103,7 +103,7 @@ public class ProviderAssistantService extends DefaultAssistantService {
             transformed = transformed.toBuilder().parameters(transformed.parameters().overrideWith(
                 ChatRequestParameters.builder().maxOutputTokens(requestedOutput == null ? output :
                     Math.min(output, requestedOutput)).build())).build();
-            transformed = context.prepare(transformed);
+            transformed = context.prepare(StageReporting.prepare(transformed));
             if (!provider.supportsImageToolResults(modelName)) {
                 transformed = context.normalizeImageResults(transformed);
             }

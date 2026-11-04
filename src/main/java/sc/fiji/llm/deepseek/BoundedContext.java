@@ -19,6 +19,7 @@ final class BoundedContext {
     final ContextArchive archive = new ContextArchive();
     final long inputLimit, byteLimit;
     volatile Consumer<String> progress = text -> {};
+    volatile Consumer<String> stageOutput = text -> {};
     volatile String latestCheckpoint = "";
     volatile boolean cancelled;
     volatile Runnable requestStarting = () -> {};
