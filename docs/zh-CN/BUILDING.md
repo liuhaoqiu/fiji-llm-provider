@@ -22,9 +22,9 @@
 
 ## 输出
 
-十八组验证全部通过后生成：
+十九组验证全部通过后生成：
 
-    build/fiji-llm-provider-0.5.9.jar
+    build/fiji-llm-provider-0.5.10.jar
 
 中间类文件和 Java 参数文件放在新的 build/run-.../ 目录中，避免旧类混入新 JAR。
 编译和测试类路径排除所有已安装的本扩展版本。参数文件用于避开 Windows 命令长度限制。
@@ -32,10 +32,11 @@
 版本号来自 MANIFEST.MF，发行版打包时间固定；.gitattributes 保留资源和许可文件的字节。
 JAR 内包含 LICENSE.txt、NOTICE.txt 及上游许可证。更换 JDK 或依赖组合可能生成不同字节。
 
-## 十八组验证
+## 十九组验证
 
 | 验证程序 | 覆盖范围 |
 | --- | --- |
+| WorkflowVerificationMain | 真实命令及宏桥接、明确参数、标签与原图测量绑定、CSV/QC 不破坏及脚本版本核验 |
 | ExecutorWorkerVerificationMain | 普通线程池空闲线程、实际执行/排队/计划任务及未知子线程 |
 | UiAutomationVerificationMain | 数值编辑器与模型提交、范围校验及已安装 Cellpose-SAM 的真实参数元数据 |
 | StagePresentationVerificationMain | 实时阶段正文、真实汇报工具轮次、最终分区、折叠细节、历史重载及取消 |

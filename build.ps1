@@ -92,7 +92,7 @@ $runtimeArguments = Join-Path $runDirectory 'test-classpath.args'
 Write-JavaArgumentFile $runtimeArguments @('--add-opens=java.base/java.lang=ALL-UNNAMED',
     "-Dfiji.llm.contextArchiveRoot=$runDirectory/context-archives",
     '-cp',"$tests;$candidateJar;$dependencyClassPath")
-foreach ($test in @('ExecutorWorkerVerificationMain','UiAutomationVerificationMain','StagePresentationVerificationMain','SharedWorkerVerificationMain','MacroExecutionVerificationMain','TaskRetentionVerificationMain','StreamStatusVerificationMain','ProgressDisplayVerificationMain','ContextBudgetVerificationMain','VerificationMain','KeyManagerVerificationMain','StartupVerificationMain',
+foreach ($test in @('WorkflowVerificationMain','ExecutorWorkerVerificationMain','UiAutomationVerificationMain','StagePresentationVerificationMain','SharedWorkerVerificationMain','MacroExecutionVerificationMain','TaskRetentionVerificationMain','StreamStatusVerificationMain','ProgressDisplayVerificationMain','ContextBudgetVerificationMain','VerificationMain','KeyManagerVerificationMain','StartupVerificationMain',
     'ModelCatalogVerificationMain','MultimodalVerificationMain','TransportVerificationMain',
     'MultiProviderVerificationMain','AssistantExecutionVerificationMain','ProviderTimeoutVerificationMain')) {
     & (Join-Path $jdkBin 'java.exe') "@$runtimeArguments" "sc.fiji.llm.deepseek.$test"
@@ -100,6 +100,8 @@ foreach ($test in @('ExecutorWorkerVerificationMain','UiAutomationVerificationMa
 }
 
 if ($VerifyMacroIntegration -or $VerifyCellpose) {
+    & (Join-Path $jdkBin 'java.exe') "@$runtimeArguments" sc.fiji.llm.deepseek.WorkflowVerificationMain ui
+    if ($LASTEXITCODE -ne 0) { throw 'Workflow GUI integration failed.' }
     & (Join-Path $jdkBin 'java.exe') "@$runtimeArguments" sc.fiji.llm.deepseek.UiAutomationVerificationMain ui
     if ($LASTEXITCODE -ne 0) { throw 'Dialog and numeric-control GUI integration failed.' }
     & (Join-Path $jdkBin 'java.exe') "@$runtimeArguments" sc.fiji.llm.deepseek.MacroExecutionVerificationMain ui
@@ -117,5 +119,5 @@ if ($VerifyCellpose) {
     if ($LASTEXITCODE -ne 0) { throw 'Large RGB Cellpose integration failed.' }
 }
 Copy-Item -LiteralPath $candidateJar -Destination $outputJar -Force
-Write-Output "All eighteen verification suites passed. Built: $outputJar"
+Write-Output "All nineteen verification suites passed. Built: $outputJar"
 Get-FileHash -LiteralPath $outputJar -Algorithm SHA256

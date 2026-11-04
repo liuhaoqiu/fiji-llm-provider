@@ -91,6 +91,8 @@ public final class MacroExecutionService extends AbstractService implements
 	private EnvironmentSnapshotService environmentSnapshotService;
 
 	private volatile boolean macroActive;
+
+    @Override public void initialize() { CommandBridge.register(getContext()); }
 	private final AsyncRunRegistry<RunKind, Execution> executions = new AsyncRunRegistry<>();
 
 	/** Starts a run and waits for completion, a blocking dialog, or the wait limit. */
@@ -228,7 +230,7 @@ public final class MacroExecutionService extends AbstractService implements
                 var module = new ScriptModule(info) {
                     @Override public void run() {
                         execution.scope = new MacroRunScope(execution.runID);
-                        execution.scope.run(() -> super.run());
+                        execution.scope.run(() -> CommandBridge.withContext(MacroExecutionService.this.getContext(), () -> super.run()));
                     }
                 };
                 getContext().inject(module);
@@ -477,6 +479,7 @@ public final class MacroExecutionService extends AbstractService implements
         macroActive = false;
         executions.complete(execution.runID);
         execution.finished = System.currentTimeMillis();
+        if (execution.source != null) ScriptValidation.record(execution.scriptID.toString(), execution.source, execution.runID, status.toString());
         execution.status = status;
 		synchronized (execution) {
 			execution.notifyAll();
@@ -520,6 +523,7 @@ public final class MacroExecutionService extends AbstractService implements
             }
 			if (waitExpired) result.addProperty("wait_expired", true);
 			result.addProperty("script_id", execution.scriptID.toString());
+            if (execution.source != null) result.addProperty("executed_source_sha256", ScriptValidation.hash(execution.source));
 			addTextProperty(result, "script_name", execution.scriptName);
 
 			final TextLogs logs = execution.logs == null ? new TextLogs("", "") :
@@ -586,6 +590,7 @@ public final class MacroExecutionService extends AbstractService implements
 				ToolRecommendationUtils.addToolRecommendations(result, execution.kind ==
 					RunKind.MACRO ? "fiji_macro_run_status" : "fiji_script_run_status");
 			}
+            try { WorkflowTools.enrichDialogs(result); } catch (Exception unavailable) { /* Retain original dialog evidence. */ }
 			return result;
 		}
 

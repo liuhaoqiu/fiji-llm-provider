@@ -1,19 +1,17 @@
-# Release verification: 0.5.9
+# Release verification: 0.5.10
 
 **English** | [简体中文](zh-CN/VERIFICATION.md)
 
-All **18 local suites** passed, followed by both optional GUI checks in isolated JVMs. The ordinary-executor regression reproduces the installed 0.5.8 wait, then verifies that 0.5.9 finishes while the pool remains reusable. Active and queued tasks, delayed scheduled work and unknown child threads remain awaited.
+All **19 local suites and three isolated GUI integrations passed**. New checks execute real SciJava dynamic commands and ImageJ Macro public bridge calls, apply explicit typed values after initialization, reject malformed inputs before command execution, and prepare the actual installed Cellpose v3 command with explicit diameter/cu126/GPU inputs without running inference. The generated macro scaffold is replayed end to end against a synthetic label-producing command, retaining original pixels.
 
-Actual Swing/AWT tests reproduce ambiguous same-title dialogs through the original Fiji tool, then select one by stable ID, reject stale IDs, commit/read back a numeric model and commit edited text before OK. Actual ImageJ image windows verify one pending save prompt per close run, explicit temporary-image discard, actual closure and unchanged source pixels/modified state. Command metadata is checked against the installed Cellpose Appose 0.1.24 SAM command without running it.
+Image checks cover exact red-channel extraction, unique nonzero/gapped label counting, original-source intensities instead of label values, border objects, immutable source pixels, non-destructive overlays and independently written CSV. Actual displayed tables/QC retain existing global Results and ROI Manager. Macro/editor tests bind exact executed source hashes, invalidate an edited script, expose actionable dialog IDs and independently display unverified script status in the final report.
 
-The existing 16 suites also pass: presentation/history and cancellation, context budgets and task retention, four provider transports/catalogs, real 1000/1001 tool-round boundaries and 65-second delayed responses. The budget fixture derives room from actual instructions/tool definitions before exercising growth. Real editor/module integration includes consecutive runs, inherited stack selectors, input/error dialogs and a 31-second macro wait.
+The preceding 18 suites remain passing: presentation/history/cancellation, macro worker completion, task retention, context budgets, all four provider transports/catalogs, real 1000/1001 boundaries and delayed/idle streams. Tests use synthetic inputs and local servers. No hosted inference, API keys or private images were used. Actual Cellpose inference and scientific segmentation accuracy were not rerun/certified; effective GPU inputs are not actual-device evidence. User testing is needed to assess model adoption and real-task quality.
 
-No hosted inference, API key or private image was used. Actual Cellpose inference was not rerun for this change; segmentation/model accuracy and live hosted-model adoption of the new tools are not certified. See [automation compatibility](AUTOMATION.md) and [0.5.8 verification](releases/v0.5.8-verification.md).
-
-JAR SHA-256: `2990a0cfe3eb0fac6ad271554d1c88d6273e738679e9cecd55ba06f5dabe9823`
+JAR SHA-256: `0e2e45617c5cdb85865f28680a73dd2ea696a5ce1815dd3975df70cfe6269a28`
 
 Unmodified Fiji Chat SHA-256: `4d9925076bb17fb02cb10830b6385d44101edc90ab28b9d967c21a02e03a8eca`
 
 Unmodified Script Editor SHA-256: `08f73d26b7cdda0e7f30cc8754ace7c297e6bcbe0ebe365d504315507e850351`
 
-Environment: Windows 11, Fiji/ImageJ 2.18.0 / 1.54p, Fiji Chat 0.2.0-SNAPSHOT, Script Editor 1.4.3, Java 21.0.7 and LangChain4j 1.21.0; compilation target Java 17.
+Environment: Windows 11, Fiji/ImageJ 2.18.0 / 1.54p, Fiji Chat 0.2.0-SNAPSHOT, Script Editor 1.4.3, Cellpose Appose 0.1.24, Java 21.0.7 and LangChain4j 1.21.0. Compilation target Java 17. See [workflow behavior and limits](WORKFLOW.md).

@@ -2,6 +2,13 @@
 
 **English** | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.5.10 — 2026-11-04
+
+- Add explicit initialized-command inputs and a source-preserving macro scaffold with receipt-based output selection.
+- Add independent 2D label/source-intensity measurements, non-destructive QC and separate CSV/table output.
+- Bind macro runs to source hashes, invalidate edited versions and display execution evidence separately from scientific claims.
+- Attach stable dialog IDs to execution results and retain prior context/round-limit behavior.
+
 ## 0.5.9 — 2026-11-04
 
 - Recognize inherited idle ordinary executor workers while retaining real active, queued, scheduled and unknown child waits. Do not terminate pools.

@@ -17,6 +17,8 @@ final class StagePresentation {
     private boolean progressHeading;
     private boolean closed;
     private long lastEdit;
+    private JsonObject scriptEvidence;
+    synchronized void validation(JsonObject evidence){scriptEvidence=evidence.deepCopy();}
 
     StagePresentation(Consumer<String> output){this.output=output;}
     synchronized void partial(String text){if(!closed && text!=null)pending.append(text);}
@@ -37,17 +39,21 @@ final class StagePresentation {
         if(paused && !pending.isEmpty())stage("**未完成的正文 / Partial response**\n\n"+pending);
         String finalText=text==null || text.isBlank()?pending.toString():text;
         pending.setLength(0);closed=true;
+        String verification=scriptEvidence==null?"":"**脚本执行核验 / Script execution evidence:** "+
+            (scriptEvidence.get("current_version_executed_successfully").getAsBoolean()?"当前代码已在本次会话运行；尚未证明从空白状态复现 / Current bytes executed in this session; clean-state replay not certified.":"当前代码尚无匹配的成功运行记录 / Current bytes have no matching successful execution.")+"\n\n";
         output.accept((progressHeading?"---\n\n":"")+
-            (paused?"## 任务暂停 / Task paused\n\n":"## 最终报告 / Final report\n\n")+finalText);
+            (paused?"## 任务暂停 / Task paused\n\n":"## 最终报告 / Final report\n\n")+verification+finalText);
     }
     synchronized void tool(ToolExecution execution){
         if(closed)return;
         String name=execution.request().name();
         if(name.equals(StageReporting.NAME))return; // the tool already emitted its message
-        if(!name.matches("fiji_(macro|script|command)_run(_status)?|fiji_script_(create|replace_content)"))return;
+        if(!name.matches("fiji_(macro|script|command)_run(_status)?|fiji_script_(create|replace_content|validation_status)|fiji_command_(run_with_inputs|inputs_status)"))return;
         JsonObject value;
         try {value=JsonParser.parseString(execution.result()).getAsJsonObject();}
         catch(RuntimeException ignored){return;} // raw diagnostics stay in the activity log
+        if(value.has("script_execution_evidence"))validation(value.getAsJsonObject("script_execution_evidence"));
+        else if(name.equals("fiji_script_validation_status")&&value.has("current_sha256"))validation(value);
         JsonElement error=value.get("error");
         boolean contentError=error!=null&&!error.isJsonNull()&&
             !(error.isJsonPrimitive()&&error.getAsJsonPrimitive().isBoolean()&&!error.getAsBoolean());
@@ -59,7 +65,8 @@ final class StagePresentation {
             long now=System.nanoTime();
             if(lastEdit==0 || now-lastEdit>=30_000_000_000L){
                 lastEdit=now;stage("脚本已"+(name.endsWith("create")?"创建":"更新")+" / Script "+
-                    (name.endsWith("create")?"created":"updated")+"。详细内容见脚本编辑器 / See the Script Editor.");
+                    (name.endsWith("create")?"created":"updated")+"。详细内容见脚本编辑器 / See the Script Editor."+
+                    (scriptEvidence!=null&&!scriptEvidence.get("current_version_executed_successfully").getAsBoolean()?" 当前版本尚未运行验证 / Current version is not execution-verified.":""));
             }
             return;
         }
@@ -71,7 +78,7 @@ final class StagePresentation {
             case "running" -> "任务正在执行 / Execution running";
             case "success" -> "执行已结束 / Execution finished: success";
             case "finished_with_warnings" -> "执行结束，有提示 / Execution finished with warnings";
-            case "finished_with_errors","infrastructure_error" -> "执行出现错误 / Execution reported an error";
+            case "finished_with_errors","infrastructure_error","error" -> "执行出现错误 / Execution reported an error";
             case "blocked_by_dialog" -> "执行正等待对话框处理 / Execution waiting for a dialog";
             default -> "";
         };

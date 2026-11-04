@@ -66,7 +66,7 @@ final class UiAutomationTools {
         if(matches.size()!=1)throw new IllegalArgumentException("Expected one command; found "+matches.size()+". Use its exact class name if necessary.");
         var info=matches.get(0);var value=new JsonObject();value.addProperty("command_class",info.getClassName());value.addProperty("title",info.getTitle());var inputs=new JsonArray();
         for(ModuleItem<?> input:info.inputs()){
-            if(org.scijava.service.Service.class.isAssignableFrom(input.getType())||input.getVisibility()==org.scijava.ItemVisibility.MESSAGE)continue;
+            if(CommandBridge.injectable(input.getType())||input.getVisibility()==org.scijava.ItemVisibility.MESSAGE)continue;
             var field=new JsonObject();field.addProperty("name",input.getName());field.addProperty("label",input.getLabel());field.addProperty("type",input.getType().getTypeName());field.addProperty("required",input.isRequired());
             put(field,"minimum",input.getMinimumValue());put(field,"maximum",input.getMaximumValue());put(field,"step",input.getStepSize());
             if(input.getChoices()!=null&&!input.getChoices().isEmpty()){var choices=new JsonArray();for(Object c:input.getChoices())choices.add(String.valueOf(c));field.add("choices",choices);}inputs.add(field);

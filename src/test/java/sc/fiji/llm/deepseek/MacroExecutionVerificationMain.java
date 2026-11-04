@@ -138,11 +138,14 @@ public class MacroExecutionVerificationMain {
             var result=svc.run(id,ScriptExecutionService.RunKind.MACRO,true).toJson();
             System.out.println("FIRST_RESULT "+result);
             check(result.get("status").getAsString().matches("success|finished_with_warnings"),"simple macro must finish");
+            check(result.get("executed_source_sha256").getAsString().equals(ScriptValidation.hash("print(\"MACRO_BODY_FINISHED\");")),"receipt binds exact executed source bytes");
+            check(ScriptValidation.active().get("current_version_executed_successfully").getAsBoolean(),"real editor current version matches successful execution");
             var again=svc.run(id,ScriptExecutionService.RunKind.MACRO,true).toJson();
             System.out.println("SECOND_RESULT "+again);
             check(again.get("status").getAsString().matches("success|finished_with_warnings"),"second macro must start");
             // Check a real wait beyond the API's bounded initial wait.
             setMacro(editor[0],"wait(31000); print(\"LONG_MACRO_DONE\");");
+            check(ScriptValidation.active().get("status").getAsString().equals("modified_since_last_run"),"real editor modification invalidates previous execution evidence");
             var longRun=svc.run(id,ScriptExecutionService.RunKind.MACRO,true).toJson();
             check(longRun.get("status").getAsString().equals("running") && longRun.get("wait_expired").getAsBoolean(),"long macro must remain running");
             try {svc.run(id,ScriptExecutionService.RunKind.MACRO,true);throw new AssertionError("duplicate run accepted");}
@@ -151,6 +154,7 @@ public class MacroExecutionVerificationMain {
             setMacro(editor[0],"Dialog.create(\"FIXTURE_INPUT\"); Dialog.addString(\"Value\",\"ok\"); Dialog.show(); print(\"DIALOG_DONE\");");
             var dialog=svc.run(id,ScriptExecutionService.RunKind.MACRO,true).toJson();
             check(dialog.get("status").getAsString().equals("blocked_by_dialog"),"real dialog must remain blocked");
+            check(dialog.has("live_dialog_targets")&&dialog.getAsJsonArray("dialogs").get(0).getAsJsonObject().has("window_id"),"blocking dialog includes actionable stable ID without another discovery round");
             dismiss("FIXTURE_INPUT");
             check(await(svc,dialog.get("run_id").getAsString()).get("status").getAsString().equals("success"),"dialog run completes after response");
             setMacro(editor[0],"undefinedFixtureFunction();");

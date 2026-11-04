@@ -91,8 +91,8 @@ public class ProviderAssistantService extends DefaultAssistantService {
         context.imageTokenAllowance = providerName.equals("DeepSeek") ? 1024 : 16384;
         ChatMemory workingMemory = chatMemory == null ? null : context.archive.wrap(chatMemory);
         context.workingMemory = workingMemory;
-        builder.tools(UiAutomationTools.tools(StageReporting.tools(tools.getToolsWithExecutors(), context),
-            () -> getContext()==null?null:getContext().service(org.scijava.command.CommandService.class)));
+        builder.tools(WorkflowTools.tools(UiAutomationTools.tools(StageReporting.tools(tools.getToolsWithExecutors(), context),
+            () -> getContext()==null?null:getContext().service(org.scijava.command.CommandService.class)),this::getContext,context));
 
         builder.chatRequestTransformer(request -> {
             ChatRequest transformed = request;
@@ -104,7 +104,7 @@ public class ProviderAssistantService extends DefaultAssistantService {
             transformed = transformed.toBuilder().parameters(transformed.parameters().overrideWith(
                 ChatRequestParameters.builder().maxOutputTokens(requestedOutput == null ? output :
                     Math.min(output, requestedOutput)).build())).build();
-            transformed = context.prepare(UiAutomationTools.prepare(StageReporting.prepare(transformed)));
+            transformed = context.prepare(WorkflowTools.prepare(UiAutomationTools.prepare(StageReporting.prepare(transformed))));
             if (!provider.supportsImageToolResults(modelName)) {
                 transformed = context.normalizeImageResults(transformed);
             }
