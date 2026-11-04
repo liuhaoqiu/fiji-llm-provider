@@ -62,6 +62,7 @@ assistant conversation.
 | DeepSeek | `https://api.deepseek.com` | Responses | `GET /models` |
 | SiliconFlow | `https://api.siliconflow.cn/v1` | Chat Completions | `GET /models?sub_type=chat` |
 | Volcengine Ark | `https://ark.cn-beijing.volces.com/api/v3` | Chat Completions | `GET /models`, plus manual model / endpoint ID |
+| Volcengine Ark | [Create or manage API keys](https://docs.volcengine.com/docs/ark/manage-api-keys?lang=zh) |
 | NVIDIA | `https://integrate.api.nvidia.com/v1` | Chat Completions | `GET /models` |
 
 ## Interface preview

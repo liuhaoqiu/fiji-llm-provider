@@ -54,6 +54,7 @@ Fiji Chat，无须替换原版 Fiji Chat JAR。
 | DeepSeek | https://api.deepseek.com | Responses | GET /models |
 | SiliconFlow | https://api.siliconflow.cn/v1 | Chat Completions | GET /models?sub_type=chat |
 | Volcengine Ark | https://ark.cn-beijing.volces.com/api/v3 | Chat Completions | GET /models，另支持手动输入模型或接入点 ID |
+| 火山引擎 Volcengine Ark | [创建或管理 API 密钥](https://docs.volcengine.com/docs/ark/manage-api-keys?lang=zh) |
 | NVIDIA | https://integrate.api.nvidia.com/v1 | Chat Completions | GET /models |
 
 ## 界面展示
