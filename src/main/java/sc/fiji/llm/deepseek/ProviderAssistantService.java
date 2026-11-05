@@ -29,6 +29,7 @@
 package sc.fiji.llm.deepseek;
 
 import dev.langchain4j.memory.ChatMemory;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.service.AiServices;
@@ -75,6 +76,8 @@ public class ProviderAssistantService extends DefaultAssistantService {
             .streamingChatModel(provider.createStreamingChatModel(modelName))
             .toolExecutionErrorHandler(tools::handleExecutionError)
             .toolArgumentsErrorHandler(tools::handleArgumentError)
+            .hallucinatedToolNameStrategy(request -> ToolExecutionResultMessage.from(request,
+                "{\"error\":\"unknown_tool\",\"executed\":false,\"message\":\"No tool exists with the requested name. Select an exact tool name from the available tool definitions and send a new tool call. Do not repeat completed actions.\"}"))
             .chatModel(provider.createChatModel(modelName))
             .maxToolCallingRoundTrips(configuredRoundTrips());
 

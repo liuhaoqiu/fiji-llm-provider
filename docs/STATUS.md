@@ -4,6 +4,10 @@
 
 This local update improves error/state reporting for the four extension providers. It adds no scientific method selection, analysis-specific QC policy, tool approvals or automatic retries. Default limits and provider settings are retained.
 
+## Unknown tool names (0.5.19)
+
+Unknown/malformed names produce an `unknown_tool` / `executed: false` result for the model to correct. Names are not guessed or repaired, and completed actions are not replayed. The existing finite round budget still applies. Built-in providers outside the extension keep the original service. See [release notes](releases/v0.5.19.md).
+
 ## Saved-script badge (0.5.18)
 
 The final report uses the most recent successfully exported script snapshot. Later cleanup, edits or tab renames do not change that saved identity; failed exports do not replace it. The badge explicitly refers to saved bytes, not the current editor. Without an export, previous latest-script behavior is retained. See [release notes](releases/v0.5.18.md).

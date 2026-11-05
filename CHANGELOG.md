@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.19
+
+Use LangChain4j's existing unknown-tool-name strategy for the four extension providers. Return an explicit `unknown_tool` / `executed: false` result so the model can choose a valid tool without aborting solely on an unknown name. No name guessing, tool replay, new retry policy or scientific-method changes; the existing finite round budget remains in effect.
+
 ## 0.5.18
 
 Presentation-only: bind the final execution badge to the latest successfully exported script snapshot. Later cleanup or edits cannot replace its target; snapshot wording avoids claiming that subsequent editor changes were executed. Without an export, existing behavior is unchanged.

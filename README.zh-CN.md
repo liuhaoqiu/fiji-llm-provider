@@ -9,8 +9,10 @@
 助手工具调用轮数上限，默认 **每条用户消息 1000 轮**。它通过 SciJava 服务扩展
 Fiji Chat，无须替换原版 Fiji Chat JAR。
 
-**当前版本：0.5.18。** 这是独立扩展，不是 Fiji 或模型服务商的官方发行版。
+**当前版本：0.5.19。** 这是独立扩展，不是 Fiji 或模型服务商的官方发行版。
 
+
+0.5.19 修复未知/畸形工具名的恢复：返回明确的未执行错误，让模型自行选择合法工具，保留原有轮数上限。详见[发布说明](docs/releases/v0.5.19.zh-CN.md)。
 
 0.5.18 修复最终核验条：即使后续运行清理脚本或编辑内容，也保留最近成功保存的脚本快照关联。详见[发布说明](docs/releases/v0.5.18.zh-CN.md)和[执行状态](docs/zh-CN/STATUS.md)。
 
@@ -32,7 +34,7 @@ Fiji Chat，无须替换原版 Fiji Chat JAR。
 
 保留 0.5.5 的上下文监测、任务保留、自动整理和中断恢复。详见[上下文与恢复](docs/zh-CN/CONTEXT.md)。
 
-详见[0.5.18 发布说明](docs/releases/v0.5.18.zh-CN.md)和[验证记录](docs/zh-CN/VERIFICATION.md)。0.5.8 发布说明保留在历史记录中。
+详见[0.5.19 发布说明](docs/releases/v0.5.19.zh-CN.md)和[验证记录](docs/zh-CN/VERIFICATION.md)。0.5.8 发布说明保留在历史记录中。
 
 ## 使用示例
 
@@ -123,7 +125,7 @@ Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.7、LangChain4j 1.21.0。
    安装 Fiji Chat。目前使用名为 Fiji-chat 的更新站点：
    https://sites.imagej.net/Fiji-chat/ 。
 2. 保存工作并正常关闭 Fiji。
-3. 从 [GitHub 发布页面](https://github.com/liuhaoqiu/fiji-llm-provider/releases)下载 fiji-llm-provider-0.5.18.jar。可用同版本 SHA256SUMS.txt 核对文件。
+3. 从 [GitHub 发布页面](https://github.com/liuhaoqiu/fiji-llm-provider/releases)下载 fiji-llm-provider-0.5.19.jar，可用 SHA256SUMS.txt 校验。
 4. 把 JAR 放入 **Fiji 安装目录中的 jars 文件夹**。
    保留属于 Fiji Chat 本体的 fiji-llm-*.jar。
 5. 升级时将旧版 fiji-llm-provider-*.jar 或 fiji-deepseek-provider-*.jar
@@ -216,7 +218,7 @@ DeepSeek 默认请求体限制为 48 MiB，与 1M token 窗口分别管理。
     pwsh -NoProfile -File ./build.ps1 -FijiRoot "C:/path/to/Fiji" -JdkHome "C:/path/to/jdk-21"
 
 脚本使用已安装的依赖编译，二十四组验证全部通过后才生成
-build/fiji-llm-provider-0.5.18.jar。超时测试会刻意等待至少 65 秒。
+build/fiji-llm-provider-0.5.19.jar。超时测试会刻意等待至少 65 秒。
 测试使用本地服务器和合成模型，不操作已打开图像，也不更改已保存的轮数设置。
 详见[构建说明](docs/zh-CN/BUILDING.md)。
 

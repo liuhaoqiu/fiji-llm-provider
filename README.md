@@ -10,9 +10,11 @@ API-key manager, and provides a configurable assistant tool-round limit with a
 default of **1000 rounds per user message**. It extends Fiji Chat through SciJava
 services; it does not replace the original Fiji Chat JAR.
 
-**Current version: 0.5.18.** This is an independent extension, not an official
+**Current version: 0.5.19.** This is an independent extension, not an official
 release from Fiji or any model provider.
 
+
+Version 0.5.19 adds unknown/malformed tool-name recovery: return a not-executed error so the model can select a valid tool. The existing finite round budget is retained. See [release notes](docs/releases/v0.5.19.md).
 
 Version 0.5.18 fixes the final report badge so it stays associated with the last successfully exported script snapshot, even after cleanup or later edits. See [release notes](docs/releases/v0.5.18.md) and [execution status](docs/STATUS.md).
 
@@ -38,7 +40,7 @@ See [Macro execution compatibility](docs/MACRO-EXECUTION.md).
 The context monitoring, task retention, automatic compaction and recovery
 features from 0.5.5 are retained. See [Context and recovery](docs/CONTEXT.md).
 
-See the [0.5.18 release notes](docs/releases/v0.5.18.md) and [verification](docs/VERIFICATION.md). The 0.5.8 release notes remain available in the release history.
+See the [0.5.19 release notes](docs/releases/v0.5.19.md) and [verification](docs/VERIFICATION.md). The 0.5.8 release notes remain available in the release history.
 
 ## Example workflow
 
@@ -138,7 +140,7 @@ dependency sets or operating systems. See [compatibility and verification](docs/
    It currently uses the `Fiji-chat` update site at
    `https://sites.imagej.net/Fiji-chat/`.
 2. Save your work and **close Fiji**.
-3. Download `fiji-llm-provider-0.5.18.jar` from the [Releases page](https://github.com/liuhaoqiu/fiji-llm-provider/releases).
+3. Download `fiji-llm-provider-0.5.19.jar` from the [Releases page](https://github.com/liuhaoqiu/fiji-llm-provider/releases).
    Optionally compare its SHA-256 with `SHA256SUMS.txt` in the same release.
 4. Copy the JAR into the **`jars` directory inside your Fiji installation**.
    Do not replace `fiji-llm-*.jar`, which belongs to Fiji Chat itself.
@@ -256,7 +258,7 @@ pwsh -NoProfile -File .\build.ps1 -FijiRoot "C:\path\to\Fiji" -JdkHome "C:\path\
 ```
 
 The script compiles against Fiji's installed JARs, runs all twenty-four verification
-suites, and writes `build/fiji-llm-provider-0.5.18.jar` only after they pass.
+suites, and writes `build/fiji-llm-provider-0.5.19.jar` only after they pass.
 The timeout suite deliberately waits at least 65 seconds. Tests use local
 servers and synthetic models/tools; they do not process your open images or
 change your saved tool-round preference. See [Building](docs/BUILDING.md).
