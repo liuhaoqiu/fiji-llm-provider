@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.18
+
+Presentation-only: bind the final execution badge to the latest successfully exported script snapshot. Later cleanup or edits cannot replace its target; snapshot wording avoids claiming that subsequent editor changes were executed. Without an export, existing behavior is unchanged.
+
 ## 0.5.17
 
 Includes the reviewed local 0.5.13–0.5.16 changes; those versions were not separate public releases. See [release notes](docs/releases/v0.5.17.md), including observed task timings.

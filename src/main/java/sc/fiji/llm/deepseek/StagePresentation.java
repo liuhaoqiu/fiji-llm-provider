@@ -18,6 +18,7 @@ final class StagePresentation {
     private boolean closed;
     private long lastEdit;
     private JsonObject scriptEvidence;
+    private JsonObject savedScriptEvidence;
     synchronized void validation(JsonObject evidence){scriptEvidence=evidence.deepCopy();}
 
     StagePresentation(Consumer<String> output){this.output=output;}
@@ -39,9 +40,10 @@ final class StagePresentation {
         if(paused && !pending.isEmpty())stage("**未完成的正文 / Partial response**\n\n"+pending);
         String finalText=text==null || text.isBlank()?pending.toString():text;
         pending.setLength(0);closed=true;
-        String verification=scriptEvidence==null?"":"**脚本执行核验 / Script execution evidence:** "+
-            (scriptEvidence.has("script_name")?"`"+string(scriptEvidence,"script_name").replace("`","")+"` ("+string(scriptEvidence,"script_id")+"): ":"")+
-            (string(scriptEvidence,"status").equals("not_monitored")?"此核验器未覆盖该脚本语言；请以执行回执为准 / This checker does not cover this script language; consult its execution receipt.":scriptEvidence.get("current_version_executed_successfully").getAsBoolean()?"当前代码已在本次会话运行；尚未证明从空白状态复现 / Current bytes executed in this session; clean-state replay not certified.":"当前代码尚无匹配的成功运行记录 / Current bytes have no matching successful execution.")+"\n\n";
+        JsonObject evidence=savedScriptEvidence==null?scriptEvidence:savedScriptEvidence;
+        String verification=evidence==null?"":(savedScriptEvidence==null?"**脚本执行核验 / Script execution evidence:** ":"**最近保存的脚本快照核验 / Last saved script snapshot evidence:** ")+
+            (evidence.has("script_name")?"`"+string(evidence,"script_name").replace("`","")+"` ("+string(evidence,"script_id")+"): ":"")+
+            (string(evidence,"status").equals("not_monitored")?"此核验器未覆盖该脚本语言；请以执行回执为准 / This checker does not cover this script language; consult its execution receipt.":evidence.get("current_version_executed_successfully").getAsBoolean()?(savedScriptEvidence==null?"当前代码已在本次会话运行；尚未证明从空白状态复现 / Current bytes executed in this session; clean-state replay not certified.":"保存的代码快照已在本次会话运行；尚未证明从空白状态复现 / Saved snapshot bytes executed in this session; clean-state replay not certified."):(savedScriptEvidence==null?"当前代码尚无匹配的成功运行记录 / Current bytes have no matching successful execution.":"保存的代码快照尚无匹配的成功运行记录 / Saved snapshot bytes have no matching successful execution."))+"\n\n";
         output.accept((progressHeading?"---\n\n":"")+
             (paused?"## 任务暂停 / Task paused\n\n":"## 最终报告 / Final report\n\n")+verification+finalText);
     }
@@ -49,7 +51,11 @@ final class StagePresentation {
         if(closed)return;
         String name=execution.request().name();
         if(name.equals("fiji_analysis_save_bundle")){
-            try{var saved=JsonParser.parseString(textContents(execution)).getAsJsonObject();if(string(saved,"status").equals("saved"))stage("交付文件已保存 / Analysis files saved: `"+string(saved,"bundle_directory").replace("`","")+"`。完整路径与哈希见 manifest.json。");else stage("交付文件保存失败 / Analysis export failed. See the activity log.");}catch(RuntimeException ignored){stage("交付文件保存未确认 / Analysis export not confirmed.");}return;
+            try{var saved=JsonParser.parseString(textContents(execution)).getAsJsonObject();if(!execution.hasFailed()&&string(saved,"status").equals("saved")){
+                // Bind the badge to the exported bytes, not later editor/cleanup activity.
+                savedScriptEvidence=saved.has("script_execution_evidence")&&saved.get("script_execution_evidence").isJsonObject()?saved.getAsJsonObject("script_execution_evidence").deepCopy():null;
+                stage("交付文件已保存 / Analysis files saved: `"+string(saved,"bundle_directory").replace("`","")+"`。完整路径与哈希见 manifest.json。");
+            }else stage("交付文件保存失败 / Analysis export failed. See the activity log.");}catch(RuntimeException ignored){stage("交付文件保存未确认 / Analysis export not confirmed.");}return;
         }
         if(name.equals(StageReporting.NAME))return; // the tool already emitted its message
         if(!name.matches("fiji_(macro|script|command)_run(_status)?|fiji_script_(create|replace_content|replace_target|read_target|validation_status)|fiji_command_(run_with_inputs|inputs_status)"))return;

@@ -20,18 +20,62 @@ public final class EngineeringVerificationMain {
     static void check(boolean yes,String reason){if(!yes)throw new AssertionError(reason);}
     public static void main(String[] args)throws Exception{
         try{
-            nestedStatuses();dialogStatuses();literalReasons();waiting();
+            nestedStatuses();savedScriptBadges();dialogStatuses();literalReasons();waiting();
             if(args.length>0)editTargets();
             System.out.println("PASS: nested script failures/success/warnings and deduplication; bounded completion/error/timeout/cancellation waits without replay or EDT blocking");
             Runtime.getRuntime().halt(0);
         }catch(Throwable failure){failure.printStackTrace();Runtime.getRuntime().halt(1);}
     }
     static ToolExecution execution(String result){
+        return execution("fiji_script_run",result);
+    }
+    static ToolExecution execution(String name,String result){
         var now=java.time.LocalDateTime.now();
         var context=dev.langchain4j.invocation.InvocationContext.builder().invocationId(UUID.randomUUID()).interfaceName("EngineeringFixture")
             .methodName("run").methodArguments(List.of("fixture")).chatMemoryId("fixture").timestampNow().build();
-        return ToolExecution.builder().request(ToolExecutionRequest.builder().id("fixture").name("fiji_script_run").arguments("{}").build())
+        return ToolExecution.builder().request(ToolExecutionRequest.builder().id("fixture").name(name).arguments("{}").build())
             .result(result).startTime(now).finishTime(now).invocationContext(context).build();
+    }
+    static JsonObject badgeEvidence(String id,String name,boolean macro,boolean executed){
+        var e=ScriptValidation.evidence(id,"fixture",macro);e.addProperty("script_name",name);
+        if(macro){e.addProperty("current_version_executed_successfully",executed);e.addProperty("status",executed?"executed_current_version":"modified_since_last_run");}
+        return e;
+    }
+    static String badge(JsonObject saved,JsonObject later,boolean paused){
+        var out=new StringBuilder();var display=new StagePresentation(out::append);
+        if(saved!=null)display.tool(execution("fiji_analysis_save_bundle",saved.toString()));
+        if(later!=null){var receipt=new JsonObject();receipt.add("script_execution_evidence",later);display.tool(execution("fiji_script_create",receipt.toString()));}
+        display.finish("done",paused);return out.substring(out.lastIndexOf("## "));
+    }
+    static JsonObject savedEvidence(JsonObject e){var saved=new JsonObject();saved.addProperty("status","saved");saved.addProperty("bundle_directory","fixture/export");saved.add("script_execution_evidence",e);return saved;}
+    static void savedScriptBadges(){
+        var delivered=badgeEvidence("0:26","cellpose_count_final.groovy",false,false);
+        var cleanup=badgeEvidence("0:27","cleanup_images.groovy",false,false);
+        String shown=badge(savedEvidence(delivered),cleanup,false);
+        check(shown.contains("Last saved script snapshot evidence")&&shown.contains("cellpose_count_final.groovy")&&shown.contains("0:26")&&!shown.contains("cleanup_images.groovy"),"exported script identity must survive cleanup creation");
+        check(shown.contains("does not cover this script language")&&!shown.contains("bytes executed"),"ordinary script remains not monitored");
+        var macro=badgeEvidence("0:1","delivered.ijm",true,true);
+        var edited=badgeEvidence("0:1","delivered.ijm",true,false);
+        shown=badge(savedEvidence(macro),edited,false);
+        check(shown.contains("Saved snapshot bytes executed")&&!shown.contains("Current bytes executed"),"later edit must not turn saved evidence into a current-editor claim");
+        check(badge(savedEvidence(edited),cleanup,false).contains("Saved snapshot bytes have no matching successful execution"),"unexecuted export must not become verified");
+        check(badge(null,cleanup,false).contains("Script execution evidence:** `cleanup_images.groovy`"),"without export preserve previous badge behavior");
+        var out=new StringBuilder();var display=new StagePresentation(out::append);var first=savedEvidence(macro);
+        String unchanged=first.toString();display.tool(execution("fiji_analysis_save_bundle",first.toString()));
+        check(first.toString().equals(unchanged),"input receipt unchanged");
+        display.tool(execution("fiji_analysis_save_bundle","{\"error\":\"export failed\"}"));
+        display.tool(execution("fiji_analysis_save_bundle","invalid JSON"));display.validation(cleanup);display.finish("done",true);
+        check(out.toString().contains("Task paused")&&out.substring(out.lastIndexOf("## ")).contains("delivered.ijm"),"failed exports and paused output retain last successful snapshot");
+        out.setLength(0);display=new StagePresentation(out::append);display.tool(execution("fiji_analysis_save_bundle",first.toString()));
+        first.getAsJsonObject("script_execution_evidence").addProperty("script_name","mutated.ijm");
+        display.validation(cleanup);display.finish("done",false);
+        check(!out.toString().contains("mutated.ijm")&&out.toString().contains("delivered.ijm"),"saved evidence remains an independent copy");
+        out.setLength(0);display=new StagePresentation(out::append);display.tool(execution("fiji_analysis_save_bundle",savedEvidence(macro).toString()));
+        display.tool(execution("fiji_analysis_save_bundle",savedEvidence(delivered).toString()));display.validation(cleanup);display.finish("done",false);
+        shown=out.substring(out.lastIndexOf("## "));
+        check(shown.contains("cellpose_count_final.groovy")&&!shown.contains("delivered.ijm"),"latest successful export wins across multiple exports");
+        check(!badge(null,null,false).contains("snapshot evidence"),"new requests do not inherit another request's snapshot");
+        System.out.println("PASS: exported-script badge survives cleanup, later edits, failed exports and pause; exact saved snapshot wording, latest export, unsupported language and request isolation");
     }
     static void nestedStatuses(){
         var body=new StringBuilder();var p=new StagePresentation(body::append);

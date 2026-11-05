@@ -4,6 +4,10 @@
 
 This local update improves error/state reporting for the four extension providers. It adds no scientific method selection, analysis-specific QC policy, tool approvals or automatic retries. Default limits and provider settings are retained.
 
+## Saved-script badge (0.5.18)
+
+The final report uses the most recent successfully exported script snapshot. Later cleanup, edits or tab renames do not change that saved identity; failed exports do not replace it. The badge explicitly refers to saved bytes, not the current editor. Without an export, previous latest-script behavior is retained. See [release notes](releases/v0.5.18.md).
+
 ## Busy and failed starts
 
 A conflicting start returns `status: busy`, `started: false`, the requested script ID and the blocking script name/ID when known. If Fiji Chat has already supplied its run ID, `blocking_run_id` and a matching status-tool recommendation are included. During initial startup or for editor tasks started outside this service, no run ID is invented. Existing work is neither cancelled nor replayed. Startup failures retain their cause chain in the activity log and a bounded explanation in public progress.

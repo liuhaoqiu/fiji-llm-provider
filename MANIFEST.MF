@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Implementation-Title: Fiji LLM Provider
-Implementation-Version: 0.5.17
+Implementation-Version: 0.5.18
 Implementation-Vendor: Haoqiu Liu
 Build-Jdk-Spec: 21
 Automatic-Module-Name: sc.fiji.llm.providers
