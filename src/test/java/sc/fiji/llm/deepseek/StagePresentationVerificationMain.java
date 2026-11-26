@@ -28,8 +28,8 @@ public final class StagePresentationVerificationMain {
     static ToolExecutionRequest call(String id,String name,String arguments){return ToolExecutionRequest.builder().id(id).name(name).arguments(arguments).build();}
     public static void main(String[] args)throws Exception {
         System.setProperty("java.awt.headless","true");
-        flow();toolIsolation();failedEdit();cancelPulse();
-        System.out.println("PASS: live milestone body, real progress-tool/AI-service rounds, folded raw details, separate final report, polling deduplication, serialized history, per-chat isolation and cancellation handle");
+        flow();toolIsolation();failedEdit();cancelPulse();cancelDuringThinking();
+        System.out.println("PASS: live milestone body, real progress-tool/AI-service rounds, folded raw details, separate final report, polling deduplication, serialized history, per-chat isolation, cancellation handle and reasoning-phase stop");
     }
     static void flow()throws Exception {
         var context=new BoundedContext(24000,1_048_576);
@@ -111,6 +111,15 @@ public final class StagePresentationVerificationMain {
         display.tool(ToolExecution.builder().request(call("failed","fiji_script_replace_content","{}"))
             .result("{\"error\":\"No script available\"}").startTime(now).finishTime(now).invocationContext(invocation).build());
         check(body.toString().contains("Tool reported an error")&&!body.toString().contains("Script updated"),"failed edit must not be presented as a completed edit");
+        // A successful create or edit is not a milestone for the reader; its state still reaches the final badge.
+        var quiet=new StringBuilder();var silent=new StagePresentation(quiet::append);
+        for(String tool:List.of("fiji_script_create","fiji_script_replace_content","fiji_script_replace_target"))
+            silent.tool(ToolExecution.builder().request(call("ok-"+tool,tool,"{}"))
+                .result("{\"script_handle\":\"h\",\"script_execution_evidence\":{\"script_id\":\"0:0\",\"status\":\"not_run_in_this_session\",\"current_version_executed_successfully\":false,\"script_name\":\"probe.ijm\"}}")
+                .startTime(now).finishTime(now).invocationContext(invocation).build());
+        check(quiet.length()==0,"a script that was only created or edited adds no line to the chat body: "+quiet);
+        silent.finish("report",false);
+        check(quiet.toString().contains("probe.ijm")&&quiet.toString().contains("no matching successful execution"),"the final badge still reports the edited script's execution state");
     }
     static void toolIsolation(){
         var a=new BoundedContext(24000,1_048_576);var b=new BoundedContext(24000,1_048_576);
@@ -123,6 +132,11 @@ public final class StagePresentationVerificationMain {
         var request=ChatRequest.builder().messages(List.of(SystemMessage.from("Keep original system text"),UserMessage.from("user task"))).build();
         var once=StageReporting.prepare(request);check(StageReporting.prepare(once)==once,"presentation prompt is not repeatedly appended");
         check(((SystemMessage)once.messages().get(0)).text().startsWith("Keep original system text"),"original system instruction retained");
+        // Users read Chinese or English: both the progress tool and the final report ask for both.
+        String protocol=((SystemMessage)once.messages().get(0)).text();
+        check(protocol.contains("'"+StageReporting.CHINESE+"'")&&protocol.contains("'"+StageReporting.ENGLISH+"'")&&protocol.indexOf(StageReporting.CHINESE)<protocol.indexOf(StageReporting.ENGLISH)&&!protocol.contains("in the user's language"),"final report is requested in Chinese and in English, in that order");
+        var progress=StageReporting.tools(Map.of(),a).keySet().iterator().next();
+        check(((dev.langchain4j.model.chat.request.json.JsonStringSchema)progress.parameters().properties().get("message")).description().contains("Chinese and then in English"),"progress updates are requested in both languages");
     }
     @SuppressWarnings("unchecked") static void cancelPulse(){
         var callbacks=new HashMap<String,Object>();var cancelled=new AtomicBoolean();var context=new BoundedContext(24000,1_048_576);
@@ -136,5 +150,24 @@ public final class StagePresentationVerificationMain {
         wrapped.stream("start").onPartialThinkingWithContext((part,ctx)->{throw new AssertionError("body draft was mislabeled as reasoning");})
             .onPartialResponseWithContext((part,ctx)->{check(part.text().isEmpty(),"display-control event must not expose pending text");ctx.streamingHandle().cancel();}).onError(e->{}).start();
         check(cancelled.get()&&context.cancelled,"buffering must preserve the upstream cancellation handle");
+    }
+    /** Fiji Chat consumes Stop in its thinking callback: it cancels the handle carried by that callback's context. */
+    @SuppressWarnings("unchecked") static void cancelDuringThinking(){
+        var callbacks=new HashMap<String,Object>();var cancelled=new AtomicBoolean();var context=new BoundedContext(24000,1_048_576);
+        TokenStream source=(TokenStream)java.lang.reflect.Proxy.newProxyInstance(TokenStream.class.getClassLoader(),new Class<?>[]{TokenStream.class},(p,m,a)->{
+            if(!m.getName().equals("start")){if(a!=null&&a.length>0)callbacks.put(m.getName(),a[0]);return p;}
+            var handle=new StreamingHandle(){public void cancel(){cancelled.set(true);}public boolean isCancelled(){return cancelled.get();}};
+            ((BiConsumer<PartialThinking,PartialThinkingContext>)callbacks.get("onPartialThinkingWithContext"))
+                .accept(new PartialThinking("REASONING_BEFORE_STOP"),new PartialThinkingContext(handle));return null;
+        });
+        var seen=new StringBuilder();var reported=new AtomicBoolean();
+        var wrapped=ProgressAssistant.wrap(Assistant.class,p->source,context,null);
+        wrapped.stream("start").onPartialResponseWithContext((part,ctx)->{})
+            .onPartialThinkingWithContext((part,ctx)->{seen.append(part.text());ctx.streamingHandle().cancel();reported.set(ctx.streamingHandle().isCancelled());})
+            .onError(e->{}).start();
+        check(seen.toString().equals("REASONING_BEFORE_STOP"),"reasoning text still reaches the activity log unchanged");
+        check(cancelled.get(),"a stop during reasoning must cancel the upstream request");
+        check(context.cancelled&&reported.get(),"a stop during reasoning must be visible to this assistant, not only to the transport");
+        check(ContextMonitor.status().contains("Stopped / completed"),"the wait monitor must end with the stopped request instead of reporting API waits indefinitely");
     }
 }

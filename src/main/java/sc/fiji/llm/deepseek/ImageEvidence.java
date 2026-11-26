@@ -27,10 +27,20 @@ final class ImageEvidence {
             d.update(buffer.array(),0,buffer.position());return HexFormat.of().formatHex(d.digest());
         }catch(Exception e){throw new IllegalStateException("Cannot hash image pixels",e);}
     }
+    /** For anything recorded as source pixels: a delivered bundle states that its source image is unprocessed. */
     static void checkInput(ImagePlus image){
-        if("qc_display".equals(image.getProperty(ROLE)))throw new IllegalArgumentException("QC display is not an analysis source; use the original image or extract a fresh channel");
-        Object expected=image.getProperty(HASH);if(expected!=null&&!expected.equals(hash(image)))throw new IllegalArgumentException("Extracted channel pixels changed after extraction; use a fresh channel from the original source");
+        checkCommandInput(image);
+        if(changedSinceExtraction(image))throw new IllegalArgumentException("Extracted channel pixels changed after extraction; use a fresh channel from the original source");
     }
+    /**
+     * For running a command. Preprocessing an extracted channel (invert, filter, subtract
+     * background) before segmentation is an analysis choice, so it is reported, not refused.
+     */
+    static void checkCommandInput(ImagePlus image){
+        if("qc_display".equals(image.getProperty(ROLE)))throw new IllegalArgumentException("QC display is not an analysis source; use the original image or extract a fresh channel");
+    }
+    static boolean extracted(ImagePlus image){return image.getProperty(HASH)!=null;}
+    static boolean changedSinceExtraction(ImagePlus image){Object expected=image.getProperty(HASH);return expected!=null&&!expected.equals(hash(image));}
     static ImagePlus extract(ImagePlus source,int channel){
         plane(source);if(source.getBitDepth()==24){if(channel<1||channel>3)throw new IllegalArgumentException("RGB channel must be 1=red, 2=green or 3=blue");}
         else if(channel!=1)throw new IllegalArgumentException("Single-channel source requires channel 1");

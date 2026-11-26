@@ -19,4 +19,11 @@ public class DeepSeekProvider extends AbstractCatalogProvider {
     @Override protected String baseUrl() { return DEFAULT_BASE_URL; }
     @Override public String getModelsDocumentationUrl() { return "https://api-docs.deepseek.com/quick_start/pricing/"; }
     @Override public String getApiKeyUrl() { return "https://platform.deepseek.com/api_keys"; }
+    // DeepSeek downsizes detail=low images to 512x512 before inference. "high" keeps
+    // the upload, which is the same request body either way, and still costs at most
+    // 1024 tokens per image: the allowance this extension already budgets for DeepSeek.
+    // https://api-docs.deepseek.com/guides/vision/ (checked 2026-11-26)
+    @Override dev.langchain4j.data.message.ImageContent.DetailLevel imageDetail() {
+        return dev.langchain4j.data.message.ImageContent.DetailLevel.HIGH;
+    }
 }

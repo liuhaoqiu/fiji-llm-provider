@@ -36,12 +36,19 @@ public final class ConfigureAssistantExecution extends ContextCommand {
     @Parameter(label = "Reserved output tokens", min = "1", persist = false)
     private int outputReserveTokens = AssistantExecutionSettings.DEFAULT_OUTPUT_RESERVE;
 
+    // SciJava shows a message parameter as one label: "\n" is not a line break there,
+    // so plain text makes the dialog as wide as the whole note. HTML with a fixed
+    // width wraps, as Fiji Chat does for its own welcome message.
+    static final String SCOPE = "<html><body style='width: 420px'>" +
+        "Applies to DeepSeek, SiliconFlow, Volcengine and NVIDIA.<br>" +
+        "One round can contain several tool calls. Reopen Fiji Chat after saving.<br>" +
+        "512K = 524288; 1M = 1048576 total tokens, including reserved output.<br>" +
+        "Old context is excerpted automatically; complete records stay on this computer.<br>" +
+        "1 MiB = 1,048,576 bytes, including encoded images and reasoning data." +
+        "</body></html>";
+
     @Parameter(visibility = ItemVisibility.MESSAGE, persist = false)
-    private String scope = "Applies to DeepSeek, SiliconFlow, Volcengine and NVIDIA.\n" +
-        "One round can contain several tool calls. Reopen Fiji Chat after saving.\n" +
-        "512K = 524288; 1M = 1048576 total tokens, including reserved output.\n" +
-        "Old context is excerpted automatically; complete records stay on this computer.\n" +
-        "1 MiB = 1,048,576 bytes, including encoded images and reasoning data.";
+    private String scope = SCOPE;
 
     public void initialize() {
         maxToolCallingRoundTrips = AssistantExecutionSettings.roundTrips(prefs);

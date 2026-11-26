@@ -51,6 +51,12 @@ public abstract class AbstractCatalogProvider extends AbstractLLMProvider {
 		return (saved == 0 ? (getName().equals("DeepSeek") ? 48 : 16) : saved) * 1_048_576L;
 	}
 
+	/**
+	 * Detail level to request for images that Fiji left at the SDK default (low);
+	 * null sends them unchanged. Set only where the service documents the effect.
+	 */
+	dev.langchain4j.data.message.ImageContent.DetailLevel imageDetail() { return null; }
+
 	long contextWindow(String modelName) {
 		Long reported = reportedContextWindow(modelName);
 		int selected = AssistantExecutionSettings.inputTokens(preferences());

@@ -160,7 +160,11 @@ final class ProgressAssistant {
                         delegate.onPartialThinkingWithContext((part, ctx) -> {
                             if (terminal.get()) return;
                             upstreamHandle = ctx.streamingHandle(); activity.output();
-                            context.archive.delta("thinking", part.text()); thinkingWithContext.accept(part, ctx);
+                            // Fiji Chat consumes Stop here by cancelling this context's handle.
+                            // Hand it ours, as the body callback does, so the stop also ends
+                            // the wait monitor and marks this assistant cancelled.
+                            context.archive.delta("thinking", part.text());
+                            thinkingWithContext.accept(part, new PartialThinkingContext(handle));
                         }); return proxy;
                     }
                     case "onPartialThinking": {

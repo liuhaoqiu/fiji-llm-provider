@@ -13,14 +13,32 @@ import sc.fiji.llm.script.*;
 /** Session evidence, not a claim of scientific correctness or clean-state replay. */
 final class ScriptValidation {
     record Run(String hash,String runId,String status){}
+    /** Used only when no live editor tab resolves, for example without a Script Editor. */
     static final Map<String,Run> latest=new ConcurrentHashMap<>();
+    // "editor:tab" is a position, and closing a tab moves every later script to a
+    // lower one. Keep a run with the tab object it belongs to, so a script is never
+    // compared with the run of whichever script previously sat at its position.
+    private static final Map<Object,Run> byTab=Collections.synchronizedMap(new WeakHashMap<>());
+    static java.util.function.Function<String,Object> tabResolver=ScriptValidation::liveTab;
+    static Object liveTab(String id){
+        try{
+            String[] parts=id.split(":");var editors=org.scijava.ui.swing.script.TextEditor.instances;
+            if(parts.length!=2||editors==null)return null;
+            int editor=Integer.parseInt(parts[0]),tab=Integer.parseInt(parts[1]);
+            return editor<0||editor>=editors.size()?null:editors.get(editor).getEditorPane(tab);
+        }catch(RuntimeException unavailable){return null;}
+    }
+    private static Run find(String id){Object tab=tabResolver.apply(id);return tab==null?latest.get(id):byTab.get(tab);}
     static String hash(String source){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(source.getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}
-    static void record(String id,String source,String run,String status){latest.put(id,new Run(hash(source),run,status));}
+    static void record(String id,String source,String run,String status){
+        var entry=new Run(hash(source),run,status);Object tab=tabResolver.apply(id);
+        if(tab==null)latest.put(id,entry);else byTab.put(tab,entry);
+    }
     static JsonObject evidence(String id,String source){
         return evidence(id,source,true);
     }
     static JsonObject evidence(String id,String source,boolean macro){
-        var out=new JsonObject();String current=hash(source);Run r=latest.get(id);
+        var out=new JsonObject();String current=hash(source);Run r=find(id);
         out.addProperty("script_id",id);out.addProperty("current_sha256",current);
         out.addProperty("execution_evidence_supported",macro);
         if(!macro){

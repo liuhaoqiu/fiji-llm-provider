@@ -39,7 +39,7 @@ final class UiAutomationTools {
             JsonObjectSchema.builder().addIntegerProperty("image_id").addBooleanProperty("discard_changes").required("image_id").build(),a->UI.close(a.get("image_id").getAsBigDecimal().intValueExact(),a.has("discard_changes")&&a.get("discard_changes").getAsBoolean()));
         add(result,"fiji_image_close_status_by_id","Read the actual outcome of a close request: closed, waiting for a dialog, pending, cancelled/not closed, or error. Use returned window_id to answer its dialog instead of repeating close.",
             JsonObjectSchema.builder().addStringProperty("run_id").required("run_id").build(),a->UI.closeStatus(string(a,"run_id")));
-        add(result,"fiji_command_parameters","Read real SciJava command input names, labels, types and constraints without running the command. Prefer these names to guessed macro labels. A parameter name alone does not certify a third-party plugin's macro adapter.",
+        add(result,"fiji_command_parameters","Read real SciJava command input names, labels, types and constraints without running the command. Each input has two keys: name, for fiji_command_run_with_inputs, and macro_key, for the options of a macro run(\"Command...\", options). macro_key is lower-case; ImageJ does not find an option written with capitals. A parameter name alone does not certify a third-party plugin's macro adapter.",
             JsonObjectSchema.builder().addStringProperty("command","Exact command title, class or menu leaf, e.g. Cellpose-SAM...").required("command").build(),a->parameters(commands.get(),string(a,"command")));
         return result;
     }
@@ -54,7 +54,7 @@ final class UiAutomationTools {
     static ChatRequest prepare(ChatRequest request){
         var messages=new ArrayList<>(request.messages());
         if(messages.stream().anyMatch(m->m instanceof SystemMessage s&&s.text().contains(MARKER)))return request;
-        String guide=MARKER+" Use stable window/control IDs for dialogs and numeric inputs. Set numbers with fiji_ui_number_set_by_id and inspect the committed value. Use fiji_command_parameters for real input names. Close disposable helper images with fiji_image_close_by_id; reuse/poll a pending close instead of issuing it again. Preserve source images and final results.";
+        String guide=MARKER+" Use stable window/control IDs for dialogs and numeric inputs. Set numbers with fiji_ui_number_set_by_id and inspect the committed value. Use fiji_command_parameters for real input names; in macro run() options write every input with its lower-case macro_key, otherwise the command opens a dialog. Close disposable helper images with fiji_image_close_by_id; reuse/poll a pending close instead of issuing it again. Preserve source images and final results.";
         for(int i=0;i<messages.size();i++)if(messages.get(i) instanceof SystemMessage s){messages.set(i,SystemMessage.from(s.text()+"\n\n"+guide));return request.toBuilder().messages(messages).build();}
         messages.add(0,SystemMessage.from(guide));return request.toBuilder().messages(messages).build();
     }
@@ -67,12 +67,16 @@ final class UiAutomationTools {
         var info=matches.get(0);var value=new JsonObject();value.addProperty("command_class",info.getClassName());value.addProperty("title",info.getTitle());var inputs=new JsonArray();
         for(ModuleItem<?> input:info.inputs()){
             if(CommandBridge.injectable(input.getType())||input.getVisibility()==org.scijava.ItemVisibility.MESSAGE)continue;
-            var field=new JsonObject();field.addProperty("name",input.getName());field.addProperty("label",input.getLabel());field.addProperty("type",input.getType().getTypeName());field.addProperty("required",input.isRequired());
+            var field=new JsonObject();field.addProperty("name",input.getName());field.addProperty("macro_key",macroKey(input.getName()));field.addProperty("label",input.getLabel());field.addProperty("type",input.getType().getTypeName());field.addProperty("required",input.isRequired());
             put(field,"minimum",input.getMinimumValue());put(field,"maximum",input.getMaximumValue());put(field,"step",input.getStepSize());
             if(input.getChoices()!=null&&!input.getChoices().isEmpty()){var choices=new JsonArray();for(Object c:input.getChoices())choices.add(String.valueOf(c));field.add("choices",choices);}inputs.add(field);
         }
-        value.add("inputs",inputs);value.addProperty("executed",false);value.addProperty("note","Static parameter metadata; current dialog/persisted values may differ. Use numeric-control readback for current values.");return value;
+        value.add("inputs",inputs);value.addProperty("executed",false);value.addProperty("note","Static parameter metadata; current dialog/persisted values may differ. Use numeric-control readback for current values.");
+        value.addProperty("macro_options","In a macro, run(\"<command title>\", \"key=value ...\") finds each input by its macro_key, which is lower-case. An input that is left out, or written with capitals, is not found: the command then opens its dialog for it and uses the value shown there instead of the macro's. Pass every listed input; use macro_key= with nothing after it for an empty text input. fiji_command_run_with_inputs takes name, not macro_key.");
+        return value;
     }
+    /** The key ImageJ's own option parser looks up for a SciJava input: the name up to the first space or colon, in lower case. */
+    static String macroKey(String name){return ij.Macro.trimKey(name);}
     static void put(JsonObject object,String name,Object value){if(value==null)return;if(value instanceof Number n){if((n instanceof Double||n instanceof Float)&&!Double.isFinite(n.doubleValue()))object.addProperty(name,n.toString());else object.addProperty(name,n);}else if(value instanceof Boolean b)object.addProperty(name,b);else if(value instanceof String||value instanceof Enum<?>)object.addProperty(name,String.valueOf(value));}
     static <T>T edt(Callable<T> action)throws Exception{
         if(EventQueue.isDispatchThread())return action.call();

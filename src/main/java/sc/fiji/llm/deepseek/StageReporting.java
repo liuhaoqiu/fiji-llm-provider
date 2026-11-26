@@ -14,18 +14,24 @@ import dev.langchain4j.service.tool.ToolExecutor;
 final class StageReporting {
     static final String NAME="fiji_report_progress";
     static final String MARKER="[Fiji LLM Provider presentation protocol]";
+    static final String CHINESE="### 中文",ENGLISH="### English";
     static final String INSTRUCTIONS=MARKER+"\n"+
         "Use fiji_report_progress to publish concise user-facing updates after meaningful milestones, "+
         "when changing approach, and before a lengthy execution or wait. Briefly state what has been done "+
-        "and what comes next, in the user's language. This is an informational update, not task completion. "+
-        "Continue the task after reporting. Keep internal reasoning and verbose debugging in the activity log; "+
-        "do not copy them into this tool. End with a self-contained final report. Do not add presentation headings; "+
+        "and what comes next. This extension has Chinese- and English-speaking users, so write every update "+
+        "in both languages with the same content: Chinese first, then English. This is an informational update, "+
+        "not task completion. Continue the task after reporting. Keep internal reasoning and verbose debugging "+
+        "in the activity log; do not copy them into this tool. End with a self-contained final report written "+
+        "twice with the same facts and numbers: a complete Chinese version under the line '"+CHINESE+"', then a "+
+        "complete English version under the line '"+ENGLISH+"'. Write each version directly in its language, not "+
+        "as a translation of the other. Keep file names, paths, parameter names and numbers identical in both, and "+
+        "put a code block only once, after the two versions. Do not add other presentation headings; "+
         "the extension supplies Progress and Final report headings.";
     static Map<ToolSpecification,ToolExecutor> tools(Map<ToolSpecification,ToolExecutor> existing,BoundedContext context){
         var result=new LinkedHashMap<>(existing);
         var specification=ToolSpecification.builder().name(NAME)
             .description("Publish a brief progress update in the chat body while continuing the current task. Use for meaningful milestones, not internal reasoning or raw tool output.")
-            .parameters(JsonObjectSchema.builder().addStringProperty("message","Concise user-facing progress and next step, in the user's language; maximum 2000 characters.").required("message").build()).build();
+            .parameters(JsonObjectSchema.builder().addStringProperty("message","Concise user-facing progress and next step, in Chinese and then in English; maximum 2000 characters in total.").required("message").build()).build();
         result.put(specification,(request,memoryId)->{
             var value=JsonParser.parseString(request.arguments()).getAsJsonObject();
             if(!value.has("message") || !value.get("message").isJsonPrimitive() || !value.get("message").getAsJsonPrimitive().isString())

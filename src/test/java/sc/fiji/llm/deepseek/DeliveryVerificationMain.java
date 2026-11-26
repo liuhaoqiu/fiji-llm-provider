@@ -19,8 +19,8 @@ public final class DeliveryVerificationMain {
     static{net.imagej.patcher.LegacyInjector.preinit();}
     static void check(boolean yes,String reason){if(!yes)throw new AssertionError(reason);}
     public static void main(String[] args){try{
-        if(args.length>0)gui();else bundle();
-        System.out.println("PASS: delivery bundle TIFF/CSV/ROI/script/hash round trips, gapped/disconnected/holed/single-pixel labels, unique destinations and no source/global Results mutation");
+        if(args.length>0)gui();else{bundle();scriptFile();}
+        System.out.println("PASS: delivery bundle TIFF/CSV/ROI/script/hash round trips, gapped/disconnected/holed/single-pixel labels, unique destinations and no source/global Results mutation; exact script file save with no silent overwrite");
         Runtime.getRuntime().halt(0);
     }catch(Throwable failure){failure.printStackTrace();Runtime.getRuntime().halt(1);}}
     static ImagePlus[] images(){
@@ -53,6 +53,31 @@ public final class DeliveryVerificationMain {
         check(Files.readString(blocked).equals("PRESERVE"),"invalid export never replaces existing file");
         check(sh.equals(ImageEvidence.hash(source))&&lh.equals(ImageEvidence.hash(labels))&&source.getRoi().getBounds().width==2&&global.getValue("sentinel",0)==777,"source, selection and global Results retained");return saved;
     }
+    static void scriptFile()throws Exception{
+        Path folder=Files.createDirectories(Path.of(System.getProperty("fiji.llm.contextArchiveRoot")).resolve("script-files"));
+        String content="// 细胞计数 µm\r\nprint(\"A\");\n\tprint(\"B\");";String hash=ScriptValidation.hash(content);
+        var script=new ScriptTargets.Snapshot("pipeline.ijm",content,ScriptValidation.evidence("9:9",content));
+        Path file=folder.resolve("pipeline.ijm");
+        var saved=ScriptTargets.write(script,hash,file.toString(),false);
+        check(saved.get("status").getAsString().equals("saved")&&!saved.get("overwritten").getAsBoolean()&&Path.of(saved.get("file").getAsString()).equals(file),"script file written to the requested path");
+        check(Arrays.equals(Files.readAllBytes(file),content.getBytes(java.nio.charset.StandardCharsets.UTF_8))&&AnalysisBundle.fileHash(file).equals(hash)&&saved.get("sha256").getAsString().equals(hash)&&saved.get("bytes").getAsLong()==Files.size(file),"file bytes, size and SHA-256 equal the script exactly, including non-ASCII text and mixed line endings");
+        check(!saved.get("editor_tab_changed").getAsBoolean()&&saved.has("script_execution_evidence"),"receipt states the editor tab is untouched and carries the execution evidence");
+        var other=new ScriptTargets.Snapshot("pipeline.ijm","OTHER",new JsonObject());
+        try{ScriptTargets.write(other,ScriptValidation.hash("OTHER"),file.toString(),false);throw new AssertionError("existing file replaced without overwrite");}catch(IllegalStateException expected){}
+        check(AnalysisBundle.fileHash(file).equals(hash),"refused save leaves the existing file unchanged");
+        var replaced=ScriptTargets.write(other,ScriptValidation.hash("OTHER"),file.toString(),true);
+        check(replaced.get("overwritten").getAsBoolean()&&Files.readString(file).equals("OTHER"),"explicit overwrite replaces the file");
+        try{ScriptTargets.write(script,ScriptValidation.hash("STALE"),folder.resolve("stale.ijm").toString(),false);throw new AssertionError("stale hash accepted");}catch(IllegalStateException expected){}
+        check(!Files.exists(folder.resolve("stale.ijm")),"hash mismatch writes nothing");
+        for(String bad:List.of("relative.ijm",folder.resolve("missing-folder").resolve("a.ijm").toString(),folder.toString()))
+            try{ScriptTargets.write(script,hash,bad,true);throw new AssertionError("invalid output_file accepted: "+bad);}catch(IllegalArgumentException expected){}
+        check(!Files.exists(folder.resolve("missing-folder")),"missing folders are not created");
+        var body=new StringBuilder();var display=new StagePresentation(body::append);
+        display.tool(EngineeringVerificationMain.execution("fiji_script_save_file",saved.toString()));
+        check(body.toString().contains("Script file saved")&&body.toString().contains(file.toString()),"chat body names the saved script file");
+        display.tool(EngineeringVerificationMain.execution("fiji_script_save_file","{\"error\":\"File already exists\"}"));
+        check(body.toString().contains("Script file not saved"),"a refused save is not shown as saved");
+    }
     static JsonObject call(Map<ToolSpecification,ToolExecutor> tools,String name,String arguments){
         var entry=tools.entrySet().stream().filter(e->e.getKey().name().equals(name)).toList();check(entry.size()==1,"one specification per tool name");
         return JsonParser.parseString(entry.get(0).getValue().execute(ToolExecutionRequest.builder().id(UUID.randomUUID().toString()).name(name).arguments(arguments).build(),null)).getAsJsonObject();
@@ -67,6 +92,12 @@ public final class DeliveryVerificationMain {
         String content="newImage(\"ID_OUTPUT\",\"8-bit black\",8,8,1); newImage(\"ID_OUTPUT\",\"8-bit black\",8,8,1); print(\"DONE\");";
         var args=new JsonObject();args.addProperty("script_handle",handle);args.addProperty("expected_sha256",hash);args.addProperty("content",content);
         var changed=call(tools,"fiji_script_replace_content",args.toString());check(!changed.has("error")&&changed.getAsJsonObject("script_execution_evidence").get("script_id").getAsString().equals(id),"existing edit tool binds exact target and evidence");
+        Path scriptFile=Files.createDirectories(Path.of(System.getProperty("fiji.llm.contextArchiveRoot")).resolve("gui-script-files")).resolve("delivered.ijm");
+        var fileArgs=new JsonObject();fileArgs.addProperty("script_handle",handle);fileArgs.addProperty("expected_sha256",ScriptValidation.hash(content));fileArgs.addProperty("output_file",scriptFile.toString());
+        var written=call(tools,"fiji_script_save_file",fileArgs.toString());check(!written.has("error")&&Files.readString(scriptFile).equals(content),"registered save tool writes the exact tab content: "+written);
+        check(call(tools,"fiji_script_save_file",fileArgs.toString()).has("error"),"registered save tool refuses to replace an existing file");
+        fileArgs.addProperty("expected_sha256",hash);fileArgs.addProperty("overwrite",true);
+        check(call(tools,"fiji_script_save_file",fileArgs.toString()).has("error")&&Files.readString(scriptFile).equals(content),"stale hash rejected before any write");
         var inactive=sc.fiji.llm.ui.TextEditorUtils.getActiveScriptID();check(inactive.toString().equals(other.get("script_id").getAsString()),"edit does not switch active tab");
         check(call(tools,"fiji_script_replace_content","{\"content\":\"WRONG_TAB\"}").has("error"),"legacy active-tab fallback rejected");
         var active=ScriptTargets.read(other.get("script_id").getAsString());check(active.get("content").getAsString().equals("OTHER"),"other tab not changed");

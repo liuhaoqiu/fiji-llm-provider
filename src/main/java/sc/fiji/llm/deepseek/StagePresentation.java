@@ -16,7 +16,6 @@ final class StagePresentation {
     private String lastStage="";
     private boolean progressHeading;
     private boolean closed;
-    private long lastEdit;
     private JsonObject scriptEvidence;
     private JsonObject savedScriptEvidence;
     synchronized void validation(JsonObject evidence){scriptEvidence=evidence.deepCopy();}
@@ -57,6 +56,12 @@ final class StagePresentation {
                 stage("交付文件已保存 / Analysis files saved: `"+string(saved,"bundle_directory").replace("`","")+"`。完整路径与哈希见 manifest.json。");
             }else stage("交付文件保存失败 / Analysis export failed. See the activity log.");}catch(RuntimeException ignored){stage("交付文件保存未确认 / Analysis export not confirmed.");}return;
         }
+        if(name.equals("fiji_script_save_file")){
+            try{var saved=JsonParser.parseString(textContents(execution)).getAsJsonObject();
+                if(!execution.hasFailed()&&string(saved,"status").equals("saved"))stage("脚本文件已保存 / Script file saved: `"+string(saved,"file").replace("`","")+"`。");
+                else stage("脚本文件未保存 / Script file not saved. See the activity log.");
+            }catch(RuntimeException ignored){stage("脚本文件保存未确认 / Script file save not confirmed.");}return;
+        }
         if(name.equals(StageReporting.NAME))return; // the tool already emitted its message
         if(!name.matches("fiji_(macro|script|command)_run(_status)?|fiji_script_(create|replace_content|replace_target|read_target|validation_status)|fiji_command_(run_with_inputs|inputs_status)"))return;
         JsonObject value;
@@ -74,15 +79,9 @@ final class StagePresentation {
             stage("工具报告错误 / Tool reported an error: `"+name+"`。详情见运行日志 / See the activity log.");
             return;
         }
-        if(name.matches("fiji_script_(create|replace_content|replace_target)")){
-            long now=System.nanoTime();
-            if(lastEdit==0 || now-lastEdit>=30_000_000_000L){
-                lastEdit=now;stage("脚本已"+(name.endsWith("create")?"创建":"更新")+" / Script "+
-                    (name.endsWith("create")?"created":"updated")+"。详细内容见脚本编辑器 / See the Script Editor."+
-                    (scriptEvidence!=null&&string(scriptEvidence,"status").equals("not_monitored")?" 此语言的精确版本核验暂未覆盖 / Exact-version evidence is not available for this language.":scriptEvidence!=null&&!scriptEvidence.get("current_version_executed_successfully").getAsBoolean()?" 当前版本尚未运行验证 / Current version is not execution-verified.":""));
-            }
-            return;
-        }
+        // A successful create or edit adds no line: the run result names the script, a saved file
+        // has its own line, and the final badge states whether the delivered bytes ran.
+        if(name.matches("fiji_script_(create|replace_content|replace_target)"))return;
         String status=string(statusValue,"status"),id=string(statusValue,"run_id");
         if(status.isBlank())return;
         String key=id.isBlank()?name:id;

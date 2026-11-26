@@ -240,7 +240,7 @@ public final class AssistantExecutionVerificationMain {
                 check(Boolean.TRUE.equals(scenario.localModel.get()), "local-provider image policy retained by core delegation");
             }
         }
-        System.out.println("PASS: real service selection; old 100-round failure; four providers >100 sync/stream; 1000 completes/1001 stops; per-message reset; custom cap; image/memory/parameters/errors; settings and core fallback");
+        System.out.println("PASS: real service selection; old 100-round failure; four providers >100 sync/stream; 1000 completes/1001 stops; per-message reset; custom cap; image/memory/parameters/errors; DeepSeek full image detail with unchanged memory, estimate and other providers; settings and core fallback");
     }
 
     static void verifyTransformsAndErrors(ProviderAssistantService service, PrefService prefs) throws Exception {
@@ -261,10 +261,34 @@ public final class AssistantExecutionVerificationMain {
                 ChatRequest request = scenario.observed.get();
                 check(request.parameters().temperature().equals(0.25) && request.parameters().maxOutputTokens() == 127,
                     "default request parameters preserved");
-                check(request.messages().stream().anyMatch(m -> m instanceof ToolExecutionResultMessage t &&
-                    t.contents().contains(image)) == nativeImages, "native tool image decision preserved");
-                if (!nativeImages) check(request.messages().stream().anyMatch(m -> m instanceof UserMessage u &&
-                    u.contents().contains(image)), "normalizer retains exact image bytes in user content");
+                List<ImageContent> inToolResults = images(request, true), inUserContent = images(request, false);
+                check(!inToolResults.isEmpty() == nativeImages, "native tool image decision preserved");
+                if (!nativeImages) check(inUserContent.size() == 1, "normalizer moves the tool image into user content");
+                var sent = new ArrayList<>(inToolResults); sent.addAll(inUserContent);
+                check(sent.size() == 1 && sent.get(0).image().equals(image.image()), "exact image bytes and MIME type reach the model");
+                // DeepSeek downsizes detail=low images to 512x512 before inference.
+                check(sent.get(0).detailLevel() == ImageContent.DetailLevel.HIGH, "DeepSeek receives tool images at full detail");
+                check(image.detailLevel() == ImageContent.DetailLevel.LOW && memory.messages().stream().anyMatch(m ->
+                    m instanceof ToolExecutionResultMessage t && t.contents().contains(image)),
+                    "conversation memory keeps Fiji's original image content");
+                check(RequestBudget.estimatedTokens(request, 1024) - RequestBudget.estimatedTokens(request, 0) == 1024,
+                    "the full-detail image is budgeted at DeepSeek's 1024-token ceiling, as before");
+            }
+        }
+        // Only DeepSeek documents this behavior; the other services keep Fiji's value.
+        for (String name : List.of("SiliconFlow", "Volcengine", "NVIDIA")) {
+            try (Scenario scenario = new Scenario(0)) {
+                wire(service, newProvider(name, scenario), scenario, prefs);
+                ImageContent image = ImageContent.from(PNG, "image/png");
+                ChatMemory memory = MessageWindowChatMemory.withMaxMessages(20);
+                var call = ToolExecutionRequest.builder().id("image").name(TOOL.name()).arguments("{}").build();
+                memory.add(UserMessage.from("image test"));
+                memory.add(AiMessage.from(call));
+                memory.add(ToolExecutionResultMessage.builder().id(call.id()).toolName(call.name())
+                    .contents(List.of(TextContent.from("preview"), image)).build());
+                stream(service.createAssistant(Assistant.class, name, "fixture", memory, null));
+                var sent = images(scenario.observed.get(), true); sent.addAll(images(scenario.observed.get(), false));
+                check(sent.size() == 1 && sent.get(0).equals(image), name + " image content and detail level are unchanged");
             }
         }
         try (Scenario scenario = new Scenario(1)) {
@@ -293,6 +317,13 @@ public final class AssistantExecutionVerificationMain {
         set(command, ConfigureAssistantExecution.class, "ui", ui);
         module.initialize();
         check(get(command, "status").toString().endsWith("ACTIVE"), "settings reports active service");
+        // The note is rendered as one label; plain text made the dialog as wide as all five sentences.
+        String note = get(command, "scope").toString();
+        check(note.startsWith("<html>") && !note.contains("\n"), "settings note uses markup that the dialog can wrap");
+        int wrapped = new javax.swing.JLabel(note).getPreferredSize().width;
+        int singleLine = new javax.swing.JLabel(note.replaceAll("<[^>]+>", " ")).getPreferredSize().width;
+        check(singleLine > 1200 && wrapped < 760, "settings note wraps instead of widening the dialog: " +
+            wrapped + " px wrapped, " + singleLine + " px as a single line");
         set(command, ConfigureAssistantExecution.class, "maxToolCallingRoundTrips", 410);
         set(command, ConfigureAssistantExecution.class, "maxInputTokens", 524288);
         set(command, ConfigureAssistantExecution.class, "maxRequestMiB", 40);
@@ -315,6 +346,17 @@ public final class AssistantExecutionVerificationMain {
         check(AssistantExecutionSettings.roundTrips(prefs) == 410, "cancel does not change settings");
         values.put(AssistantExecutionSettings.ROUND_TRIPS_KEY, -1);
         check(AssistantExecutionSettings.roundTrips(prefs) == 1000, "invalid stored limit falls back to finite default");
+    }
+
+    static List<ImageContent> images(ChatRequest request, boolean inToolResults) {
+        var found = new ArrayList<ImageContent>();
+        for (var message : request.messages()) {
+            List<dev.langchain4j.data.message.Content> contents =
+                inToolResults && message instanceof ToolExecutionResultMessage tool ? tool.contents() :
+                !inToolResults && message instanceof UserMessage user ? user.contents() : List.of();
+            for (var content : contents) if (content instanceof ImageContent image) found.add(image);
+        }
+        return found;
     }
 
     static LLMProvider newProvider(String name, Scenario s) {

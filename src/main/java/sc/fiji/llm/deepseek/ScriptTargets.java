@@ -45,6 +45,33 @@ final class ScriptTargets {
         throw new IllegalStateException("Script tab was closed");
     });}
 
+    /** Writes the script bytes whose hash was just checked. The editor tab is not saved, renamed or bound to the file. */
+    static JsonObject save(String handle,String expected,String file,boolean overwrite)throws Exception{
+        return write(snapshot(handle,expected),expected,file,overwrite);
+    }
+    static JsonObject write(Snapshot script,String expected,String file,boolean overwrite)throws java.io.IOException{
+        byte[] bytes=script.content().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String hash=ScriptValidation.hash(script.content());
+        if(!hash.equalsIgnoreCase(expected))throw new IllegalStateException("Script changed; read its current hash before saving");
+        java.nio.file.Path path;
+        try{path=java.nio.file.Path.of(file);}catch(java.nio.file.InvalidPathException invalid){throw new IllegalArgumentException("output_file is not a valid path");}
+        if(!path.isAbsolute())throw new IllegalArgumentException("output_file must be an absolute file path: an existing folder plus a filename");
+        path=path.normalize();var parent=path.getParent();
+        if(parent==null||!java.nio.file.Files.isDirectory(parent))throw new IllegalArgumentException("The folder of output_file does not exist: "+parent);
+        if(java.nio.file.Files.isDirectory(path))throw new IllegalArgumentException("output_file is a folder; add a filename");
+        boolean existed=java.nio.file.Files.exists(path);
+        if(existed&&!overwrite)throw new IllegalStateException("File already exists and was not changed: "+path+". Choose another filename or pass overwrite=true");
+        if(existed)java.nio.file.Files.write(path,bytes,java.nio.file.StandardOpenOption.WRITE,java.nio.file.StandardOpenOption.TRUNCATE_EXISTING);
+        else java.nio.file.Files.write(path,bytes,java.nio.file.StandardOpenOption.CREATE_NEW,java.nio.file.StandardOpenOption.WRITE);
+        if(!Arrays.equals(java.nio.file.Files.readAllBytes(path),bytes))throw new java.io.IOException("The saved file does not match the script bytes: "+path);
+        var out=new JsonObject();out.addProperty("status","saved");out.addProperty("file",path.toString());out.addProperty("bytes",bytes.length);
+        out.addProperty("sha256",hash);out.addProperty("overwritten",existed);out.addProperty("script_name",script.name());
+        if(script.evidence()!=null)out.add("script_execution_evidence",script.evidence());
+        out.addProperty("editor_tab_changed",false);
+        out.addProperty("note","The file holds exactly the script bytes with this SHA-256 (UTF-8). The editor tab is still unsaved and is not bound to this file.");
+        return out;
+    }
+
     static JsonObject read(String id)throws Exception{return UiAutomationTools.edt(()->{
         if(!id.matches("[0-9]+:[0-9]+"))throw new IllegalArgumentException("Use script_id from fiji_script_list, e.g. 0:1");
         var parts=id.split(":");int editorIndex=Integer.parseInt(parts[0]),tabIndex=Integer.parseInt(parts[1]);

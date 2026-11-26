@@ -29,10 +29,10 @@ Java processes with synthetic inputs and loopback HTTP servers.
 
 ## Build outputs
 
-After all twenty-four suites pass, the output is:
+After all twenty-six suites pass, the output is:
 
 ```text
-build/fiji-llm-provider-0.5.17.jar
+build/fiji-llm-provider-0.5.23.jar
 ```
 
 Intermediate classes and Java argument files are kept under a fresh

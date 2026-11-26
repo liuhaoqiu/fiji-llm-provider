@@ -23,7 +23,7 @@ public final class UiAutomationVerificationMain {
                 System.out.println("PASS: actual duplicate-title dialogs by stable IDs, numeric commit/readback, stale-ID rejection, pending-close deduplication, save prompts and explicit temporary-image cleanup; source image retained");
                 Runtime.getRuntime().halt(0);
             }
-            System.out.println("PASS: numeric editor/model mismatch reproduced, committed values and range checks, real Cellpose-SAM input metadata without running it");
+            System.out.println("PASS: numeric editor/model mismatch reproduced, committed values and range checks, real Cellpose-SAM input metadata without running it, with macro keys that ImageJ's option parser resolves");
         }catch(Throwable t){t.printStackTrace();if(gui)Runtime.getRuntime().halt(1);throw t;}
     }
     static void numbers()throws Exception{
@@ -43,6 +43,19 @@ public final class UiAutomationVerificationMain {
         var data=UiAutomationTools.parameters(service,"Cellpose-SAM...");var names=new HashSet<String>();for(var row:data.getAsJsonArray("inputs"))names.add(row.getAsJsonObject().get("name").getAsString());
         check(names.containsAll(List.of("cell_diameter","min_size","image_title","chan0","chan1","chan2")),"actual SAM parameter names, not guessed display labels");
         check(!data.get("executed").getAsBoolean(),"metadata discovery must not execute Cellpose");
+        // A macro's run("Cellpose-SAM...", options) is parsed by ImageJ, which looks options up in lower case.
+        var byName=new StringBuilder();var byMacroKey=new StringBuilder();var capitalised=new ArrayList<String>();
+        for(var row:data.getAsJsonArray("inputs")){
+            String name=row.getAsJsonObject().get("name").getAsString(),key=row.getAsJsonObject().get("macro_key").getAsString();
+            byName.append(name).append("=v ");byMacroKey.append(key).append("=v ");if(!name.equals(key))capitalised.add(name);
+        }
+        check(capitalised.containsAll(List.of("return_ROIs","labelType","torchVersion","useGPU")),"the real command has inputs whose names contain capitals: "+capitalised);
+        for(var row:data.getAsJsonArray("inputs")){
+            String name=row.getAsJsonObject().get("name").getAsString();
+            check("v".equals(ij.Macro.getValue(byMacroKey.toString(),name,null)),"ImageJ finds every input when the macro uses macro_key: "+name);
+            check(capitalised.contains(name)==(ij.Macro.getValue(byName.toString(),name,null)==null),"written with its capitals an input is not found, which is what opens the dialog: "+name);
+        }
+        check(data.get("macro_options").getAsString().contains("lower-case"),"the result states the macro rule next to the keys");
     }
     static JsonObject row(String title,String label)throws Exception{
         for(var item:registry.windows("").getAsJsonArray("windows")){

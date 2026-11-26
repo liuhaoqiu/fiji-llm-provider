@@ -22,9 +22,9 @@
 
 ## 输出
 
-二十四组验证全部通过后生成：
+二十六组验证全部通过后生成：
 
-    build/fiji-llm-provider-0.5.17.jar
+    build/fiji-llm-provider-0.5.23.jar
 
 中间类文件和 Java 参数文件放在新的 build/run-.../ 目录中，避免旧类混入新 JAR。
 编译和测试类路径排除所有已安装的本扩展版本。参数文件用于避开 Windows 命令长度限制。

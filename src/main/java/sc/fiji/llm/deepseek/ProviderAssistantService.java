@@ -28,8 +28,15 @@
  */
 package sc.fiji.llm.deepseek;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import dev.langchain4j.memory.ChatMemory;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.Content;
+import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
+import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.service.AiServices;
@@ -111,10 +118,37 @@ public class ProviderAssistantService extends DefaultAssistantService {
             if (!provider.supportsImageToolResults(modelName)) {
                 transformed = context.normalizeImageResults(transformed);
             }
+            if (hosted.imageDetail() != null) transformed = withImageDetail(transformed, hosted.imageDetail());
             RequestBudget.checkTokens(transformed, context.inputLimit, context.imageTokenAllowance);
             return transformed;
         });
         if (workingMemory != null) builder.chatMemory(workingMemory);
         return ProgressAssistant.wrap(assistantInterface, builder.build(), context, workingMemory);
+    }
+
+    /**
+     * Raises default-detail images in the outgoing request only. Chat memory and the
+     * local archive keep Fiji's original content, and image bytes are not touched.
+     */
+    private static ChatRequest withImageDetail(ChatRequest request, ImageContent.DetailLevel detail) {
+        var messages = new ArrayList<ChatMessage>(request.messages().size());
+        boolean changed = false;
+        for (ChatMessage message : request.messages()) {
+            List<Content> contents = message instanceof UserMessage user ? user.contents() :
+                message instanceof ToolExecutionResultMessage tool ? tool.contents() : null;
+            List<Content> updated = null;
+            if (contents != null) for (int i = 0; i < contents.size(); i++) {
+                if (contents.get(i) instanceof ImageContent image && image.detailLevel() != detail &&
+                    image.detailLevel() == ImageContent.DetailLevel.LOW) {
+                    if (updated == null) updated = new ArrayList<>(contents);
+                    updated.set(i, ImageContent.from(image.image(), detail));
+                }
+            }
+            if (updated == null) { messages.add(message); continue; }
+            changed = true;
+            messages.add(message instanceof UserMessage user ? user.toBuilder().contents(updated).build() :
+                ((ToolExecutionResultMessage) message).toBuilder().contents(updated).build());
+        }
+        return changed ? request.toBuilder().messages(messages).build() : request;
     }
 }

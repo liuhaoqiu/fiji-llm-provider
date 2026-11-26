@@ -77,7 +77,7 @@ public final class CommandBridge {
         lastReceipt.remove();
         if(javax.swing.SwingUtilities.isEventDispatchThread())throw new IllegalStateException("Run commands from a worker, not the UI thread");
         var image=ij.WindowManager.getImage(imageId);if(image==null)throw new IllegalArgumentException("Input image ID is no longer open");
-        ImageEvidence.checkInput(image);String before=ImageEvidence.hash(image);int[] previous=ij.WindowManager.getIDList();Set<Integer> old=new HashSet<>();if(previous!=null)for(int id:previous)old.add(id);
+        ImageEvidence.checkCommandInput(image);boolean preprocessed=ImageEvidence.changedSinceExtraction(image);String before=ImageEvidence.hash(image);int[] previous=ij.WindowManager.getIDList();Set<Integer> old=new HashSet<>();if(previous!=null)for(int id:previous)old.add(id);
         var info=find(c,query);long start=System.nanoTime();ij.ImagePlus oldTemp=ij.WindowManager.getTempCurrentImage();
         ij.WindowManager.setTempCurrentImage(image);
         try{
@@ -89,6 +89,10 @@ public final class CommandBridge {
             if(module instanceof org.scijava.Cancelable cancel&&cancel.isCanceled())throw new IllegalStateException("Command cancelled: "+cancel.getCancelReason());
             var result=new JsonObject();result.addProperty("status","success");result.addProperty("command_class",info.getClassName());result.add("effective_inputs",effective);result.addProperty("elapsed_ms",(System.nanoTime()-start)/1_000_000);
             result.addProperty("input_image_id",imageId);result.addProperty("input_sha256_before",before);result.addProperty("input_sha256_after",ImageEvidence.hash(image));result.addProperty("input_pixels_unchanged",before.equals(result.get("input_sha256_after").getAsString()));
+            if(ImageEvidence.extracted(image)){
+                result.addProperty("input_changed_since_extraction",preprocessed);
+                if(preprocessed)result.addProperty("input_note","The input is an extracted channel whose pixels were changed after extraction: the command ran on a preprocessed image, not on raw source pixels. Take intensity measurements from the original source, and save the original as the bundle source.");
+            }
             var added=new JsonArray();int[] ids=ij.WindowManager.getIDList();if(ids!=null)for(int id:ids)if(!old.contains(id)){var im=ij.WindowManager.getImage(id);var row=new JsonObject();row.addProperty("image_id",id);row.addProperty("title",im.getTitle());added.add(row);}result.add("new_images_observed",added);
             result.addProperty("actual_device","not_reported_by_command");result.addProperty("note","Effective GPU/CUDA inputs are configuration, not independent proof of the backend device. Newly observed windows may include concurrent external activity.");lastReceipt.set(result.deepCopy());return result;
         }finally{ij.WindowManager.setTempCurrentImage(oldTemp);}

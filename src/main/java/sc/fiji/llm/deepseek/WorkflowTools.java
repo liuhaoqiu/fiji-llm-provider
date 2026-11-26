@@ -27,6 +27,8 @@ final class WorkflowTools {
             JsonObjectSchema.builder().addStringProperty("script_handle").addStringProperty("expected_sha256").addStringProperty("content").required("script_handle","expected_sha256","content").build(),a->ScriptTargets.replace(UiAutomationTools.string(a,"script_handle"),UiAutomationTools.string(a,"expected_sha256"),UiAutomationTools.string(a,"content")));
         UiAutomationTools.add(result,"fiji_analysis_save_bundle","Save a fresh local analysis bundle: exact script snapshot, raw source TIFF, label TIFF, flattened QC, CSV, one ROI per nonzero label in rois.zip and a hash/path manifest. Requires explicit source/label IDs and current script_handle/hash. Does not clear global Results or ROI Manager. output_directory is an optional parent; a new unique child directory prevents overwrites. Default is this task's local archive exports folder.",
             JsonObjectSchema.builder().addIntegerProperty("source_image_id").addIntegerProperty("label_image_id").addIntegerProperty("source_channel").addStringProperty("script_handle").addStringProperty("expected_sha256").addStringProperty("output_directory").required("source_image_id","label_image_id","source_channel","script_handle","expected_sha256").build(),a->AnalysisBundle.save(ij.WindowManager.getImage(a.get("source_image_id").getAsInt()),ij.WindowManager.getImage(a.get("label_image_id").getAsInt()),a.get("source_channel").getAsInt(),ScriptTargets.snapshot(UiAutomationTools.string(a,"script_handle"),UiAutomationTools.string(a,"expected_sha256")),a.has("output_directory")&&!a.get("output_directory").getAsString().isBlank()?java.nio.file.Path.of(a.get("output_directory").getAsString()):budget.archive.directory.resolve("exports")));
+        UiAutomationTools.add(result,"fiji_script_save_file","Write one script to disk as a file: exactly the current bytes of script_handle (UTF-8), only if expected_sha256 still matches. output_file is an absolute path whose folder already exists, e.g. the image folder plus the script filename. An existing file is not replaced unless overwrite=true. Returns the saved path, byte count and SHA-256. Does not save, rename or bind the editor tab, and does not run the script.",
+            JsonObjectSchema.builder().addStringProperty("script_handle").addStringProperty("expected_sha256").addStringProperty("output_file").addBooleanProperty("overwrite").required("script_handle","expected_sha256","output_file").build(),a->ScriptTargets.save(UiAutomationTools.string(a,"script_handle"),UiAutomationTools.string(a,"expected_sha256"),UiAutomationTools.string(a,"output_file"),a.has("overwrite")&&!a.get("overwrite").isJsonNull()&&a.get("overwrite").getAsBoolean()));
 
         UiAutomationTools.add(result,"fiji_command_run_with_inputs","Run one SciJava command with an explicit JSON input object (exact names/types from fiji_command_parameters), no input harvester. image_id binds initialization to the intended image. Returns a run_id; poll fiji_command_inputs_status. Core postprocessors are skipped; inspect returned image IDs/results.",
             JsonObjectSchema.builder().addStringProperty("command").addStringProperty("inputs_json").addIntegerProperty("image_id").required("command","inputs_json","image_id").build(),a->start(context.get(),UiAutomationTools.string(a,"command"),JsonParser.parseString(UiAutomationTools.string(a,"inputs_json")).getAsJsonObject(),a.get("image_id").getAsInt()));
@@ -45,6 +47,16 @@ final class WorkflowTools {
         UiAutomationTools.add(result,"fiji_label_measure","Count unique nonzero labels and measure areas/intensities from an explicitly separate source image/channel. For one 2D plane. Creates a non-destructive QC copy and an independent CSV/table, without clearing existing Results or ROI Manager. Signal coverage is not object recall; no size cutoff is applied.",
             JsonObjectSchema.builder().addIntegerProperty("source_image_id").addIntegerProperty("label_image_id").addIntegerProperty("source_channel").required("source_image_id","label_image_id","source_channel").build(),a->ImageEvidence.deliver(ij.WindowManager.getImage(a.get("source_image_id").getAsInt()),ij.WindowManager.getImage(a.get("label_image_id").getAsInt()),a.get("source_channel").getAsInt(),budget.archive.directory,true));
         UiAutomationTools.add(result,"fiji_script_validation_status","Compare the active macro's exact SHA-256 with its recorded execution. Ordinary scripts return not_monitored, not a claim that they never ran; consult their execution receipts. Editing invalidates a macro match. Does not certify fresh-state replay or scientific correctness.",JsonObjectSchema.builder().build(),a->ScriptValidation.active());
+        // Fiji Chat's run-status tools answer at once, so a model waiting for a 20 s run asks ten times and
+        // each question is a full model request. Let one call wait, as fiji_command_inputs_status already does.
+        for(var entry:new ArrayList<>(result.entrySet())){
+            var spec=entry.getKey();if(!WAITABLE.contains(spec.name())||spec.parameters()==null||spec.parameters().properties().containsKey("wait_seconds"))continue;
+            ToolExecutor prior=entry.getValue();result.remove(spec);
+            var schema=JsonObjectSchema.builder().addProperties(spec.parameters().properties()).addIntegerProperty("wait_seconds","Optional integer 0-30, default 20: how long to wait while the run is still running.");
+            if(spec.parameters().required()!=null)schema.required(spec.parameters().required());
+            result.put(ToolSpecification.builder().name(spec.name()).description(spec.description()+" Waits up to wait_seconds (default 20, integer 0-30) while the run is still running and answers at once on completion, error or a dialog. Prefer one bounded wait to repeated polls.").parameters(schema.build()).build(),
+                (request,id)->waitWhileRunning(prior,request,id,()->budget.cancelled));
+        }
         for(var entry:new ArrayList<>(result.entrySet())){
             String name=entry.getKey().name();if(!Set.of("fiji_script_create","fiji_script_replace_content","fiji_script_rename","fiji_macro_run","fiji_macro_run_status","fiji_command_run","fiji_command_run_status").contains(name))continue;
             ToolExecutor prior=entry.getValue();result.put(entry.getKey(),(request,id)->{
@@ -57,6 +69,33 @@ final class WorkflowTools {
             });
         }
         return result;
+    }
+    static final Set<String> WAITABLE=Set.of("fiji_macro_run_status","fiji_script_run_status","fiji_command_run_status");
+    /** Repeats the original status read until the run leaves "running" or the wait ends. Never reruns or cancels the run. */
+    static String waitWhileRunning(ToolExecutor prior,dev.langchain4j.agent.tool.ToolExecutionRequest request,Object memoryId,java.util.function.BooleanSupplier cancelled){
+        int seconds=20;String arguments=request.arguments();
+        try{
+            var parsed=JsonParser.parseString(arguments==null||arguments.isBlank()?"{}":arguments).getAsJsonObject();
+            if(parsed.has("wait_seconds")){
+                if(!parsed.get("wait_seconds").isJsonNull())seconds=parsed.get("wait_seconds").getAsBigDecimal().intValueExact();
+                parsed.remove("wait_seconds");arguments=parsed.toString(); // the original tool does not know this argument
+            }
+            if(seconds<0||seconds>30)throw new IllegalArgumentException();
+        }catch(RuntimeException invalid){var error=new JsonObject();error.addProperty("error","wait_seconds must be an integer from 0 to 30");return error.toString();}
+        var forwarded=dev.langchain4j.agent.tool.ToolExecutionRequest.builder().id(request.id()).name(request.name()).arguments(arguments).build();
+        long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(seconds);
+        while(true){
+            String text=prior.execute(forwarded,memoryId);
+            if(seconds==0||!stillRunning(text)||cancelled.getAsBoolean()||javax.swing.SwingUtilities.isEventDispatchThread()||System.nanoTime()>=deadline)return text;
+            try{Thread.sleep(500);}catch(InterruptedException interrupted){Thread.currentThread().interrupt();return text;}
+        }
+    }
+    static boolean stillRunning(String text){
+        try{
+            var value=JsonParser.parseString(text).getAsJsonObject();
+            for(String key:List.of("ran_script","ran_macro","ran_command"))if(value.has(key)&&value.get(key).isJsonObject()&&value.getAsJsonObject(key).has("status")){value=value.getAsJsonObject(key);break;}
+            return value.has("status")&&value.get("status").isJsonPrimitive()&&value.get("status").getAsString().equals("running");
+        }catch(RuntimeException notStatus){return false;}
     }
     static String macroTemplate(String command,JsonObject inputs,int channel){
         if(channel<1||channel>3)throw new IllegalArgumentException("Channel must be 1, 2 or 3");
@@ -103,7 +142,7 @@ final class WorkflowTools {
     }
     static ChatRequest prepare(ChatRequest request){
         var messages=new ArrayList<>(request.messages());if(messages.stream().anyMatch(m->m instanceof SystemMessage s&&s.text().contains(MARKER)))return request;
-        String guidance="[Fiji workflow evidence] Prefer explicit-input command execution over repeated parameter dialogs. Use fiji_command_inputs_status bounded waiting instead of rapid polls. fiji_script_create accepts filename/language/content and returns script_handle/current_sha256. fiji_script_replace_content now requires that handle and expected_sha256; it never edits an arbitrary active tab. For existing tabs first use fiji_script_read_target. Select the intended script before running it. Avoid resetting global ROI Manager; prefer return_ROIs=false and export one ROI per label with fiji_analysis_save_bundle. Before delivery save a bundle of the current script and explicit source/labels, then report manifest_file and saved paths. Do not claim disk saving from editor tabs alone. For a delivered 2D label-analysis macro, use fiji_command_macro_template to generate a source-preserving scaffold with typed runtime bridges, then run the exact final bytes. Extract analysis channels by image ID; QC images are display copies, never new raw inputs. Use fiji_label_measure with distinct source and label IDs; its intensity values come from the source, not label numbers. Preserve existing Results and ROI Manager. Before delivery inspect fiji_script_validation_status; editing invalidates the last execution match. Name the actual command/model and distinguish requested GPU settings from a reported device. Signal coverage and repeat counts are not accuracy/error bounds. Execution is not proof of clean-state reproducibility or scientific correctness.";
+        String guidance="[Fiji workflow evidence] Prefer explicit-input command execution over repeated parameter dialogs. Use fiji_command_inputs_status bounded waiting instead of rapid polls. The run-status tools for macros, scripts and commands wait too (wait_seconds, default 20): ask once and let it wait. fiji_script_create accepts filename/language/content and returns script_handle/current_sha256. fiji_script_replace_content now requires that handle and expected_sha256; it never edits an arbitrary active tab. For existing tabs first use fiji_script_read_target. Select the intended script before running it. Avoid resetting global ROI Manager; prefer return_ROIs=false and export one ROI per label with fiji_analysis_save_bundle. Before delivery save a bundle of the current script and explicit source/labels, then report manifest_file and saved paths. Do not claim disk saving from editor tabs alone. To deliver a script file, call fiji_script_save_file with its script_handle and current hash; it writes those exact bytes and leaves the editor tab unsaved. For a delivered 2D label-analysis macro, use fiji_command_macro_template to generate a source-preserving scaffold with typed runtime bridges, then run the exact final bytes. Extract analysis channels by image ID; QC images are display copies, never new raw inputs. Use fiji_label_measure with distinct source and label IDs; its intensity values come from the source, not label numbers. Preserve existing Results and ROI Manager. Before delivery inspect fiji_script_validation_status; editing invalidates the last execution match. Name the actual command/model and distinguish requested GPU settings from a reported device. Signal coverage and repeat counts are not accuracy/error bounds. Execution is not proof of clean-state reproducibility or scientific correctness.";
         for(int i=0;i<messages.size();i++)if(messages.get(i) instanceof SystemMessage s){messages.set(i,SystemMessage.from(s.text()+"\n\n"+guidance));return request.toBuilder().messages(messages).build();}messages.add(0,SystemMessage.from(guidance));return request.toBuilder().messages(messages).build();
     }
 }

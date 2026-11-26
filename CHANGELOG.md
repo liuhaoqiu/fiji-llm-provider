@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.5.23
+
+Published together with the local versions 0.5.20 to 0.5.22 below. See the [release notes](docs/releases/v0.5.23.md).
+
+Three presentation and workflow changes requested after the 0.5.21 and 0.5.22 tasks.
+
+Reports in Chinese and English. The extension has users of both languages, so progress updates are now requested in both (Chinese, then English), and the final report as two complete versions under `### 中文` and `### English`. Code blocks appear once, after both versions; file names, paths, parameter names and numbers stay identical. The earlier wording, "in the user's language", is gone. The final report becomes about twice as long.
+
+No body line for a script that was only created or edited. "Script created / Script updated ... not execution-verified" appeared about ten times per task and said nothing the run results, the saved-file line and the final badge do not already say. A failed create or edit is still reported.
+
+Running a command on a preprocessed channel. `fiji_command_run_with_inputs` refused an image from `fiji_image_extract_channel` once its pixels had been changed, which blocked ordinary preprocessing such as inverting before segmentation and was bypassed by duplicating the image in a macro. The command now runs, and its receipt states `input_changed_since_extraction` with a note that the input was not raw source pixels. The analysis bundle is unchanged: it still refuses a modified channel as its source image, because the bundle records that image as unprocessed. Painted QC displays are still refused as command input.
+
+Retries, timeouts and budgets are untouched.
+
+## 0.5.22 (local)
+
+Two changes found in a real task on 0.5.21.
+
+Macro option keys. `fiji_command_parameters` listed SciJava input names such as `return_ROIs`, `labelType`, `torchVersion` and `useGPU`, and told the model to prefer them. ImageJ looks macro options up in lower case, so in `run("Command...", options)` every input written with capitals was not found: the command opened its dialog, and the delivered macro needed a click on every run and took those values from the dialog instead of from the macro. Each input now also carries `macro_key`, taken from ImageJ's own key rule, and the result and tool description state when a dialog opens.
+
+Run-status tools wait. `fiji_macro_run_status`, `fiji_script_run_status` and `fiji_command_run_status` answered immediately, so a model waiting for a 20-second run asked many times, each a full model request (48 status reads in the observed task). They now accept `wait_seconds` (0-30, default 20), wait while the run is still running, and answer at once on completion, error or a dialog. The run itself is never replayed or cancelled, and Stop ends the wait.
+
+Analysis methods, retries, timeouts and budgets are untouched.
+
+## 0.5.21 (local)
+
+Three changes found in real tasks on 0.5.20.
+
+Script execution evidence follows the script. Evidence was stored under the script's `editor:tab` position, so after earlier tabs were closed a delivered macro could be compared with the run of the script that previously held its position and be reported as `modified_since_last_run` although those exact bytes had just run. Evidence is now kept with the live editor tab. This removes a false "not verified"; it never produced a false "verified", because the byte hash was always compared as well.
+
+New tool `fiji_script_save_file`: writes the exact bytes of one script tab, identified by `script_handle` and `expected_sha256`, to an absolute path in an existing folder, and returns the path, size and SHA-256. An existing file is replaced only with `overwrite=true`. The editor tab is not saved, renamed or bound to the file. Models previously had to copy the whole macro into a second script to write it to disk, or drive the editor's Save dialog. The chat body shows the saved path.
+
+The note in **LLM Execution Settings** now wraps. It was rendered as one line and made the dialog as wide as all of its sentences.
+
+Analysis methods, retries, timeouts and budgets are untouched.
+
+## 0.5.20 (local)
+
+Fix: pressing Stop while the model was still reasoning cancelled the request but left this extension's wait monitor running. It kept recording "Waiting for new API output" once a minute until Fiji was closed, and could in rare cases consume a later Stop meant for another request. The reasoning callback now receives the extension's own cancellation handle, as the body callback already did, so a stop ends the upstream request, the monitor and the assistant's cancelled state together. Only `ProgressAssistant` changes for this fix.
+
+DeepSeek image detail: Fiji Chat sends images with the SDK default `detail=low`, which DeepSeek documents as downscaling to 512×512 before inference. For the DeepSeek service only, such images are now sent with `detail=high`, so the model sees the image it was given. The request body is the same size either way, and DeepSeek charges at most 1024 tokens per image, which is the per-image allowance this extension already budgets, so compaction thresholds do not move. Image bytes, chat memory and the local archive are unchanged. SiliconFlow, Volcengine Ark and NVIDIA keep the previous behavior.
+
+Analysis methods, retries and timeouts are untouched.
+
 ## 0.5.19
 
 Use LangChain4j's existing unknown-tool-name strategy for the four extension providers. Return an explicit `unknown_tool` / `executed: false` result so the model can choose a valid tool without aborting solely on an unknown name. No name guessing, tool replay, new retry policy or scientific-method changes; the existing finite round budget remains in effect.
