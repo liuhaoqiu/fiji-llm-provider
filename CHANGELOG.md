@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.6.0
+
+See the [release notes](docs/releases/v0.6.0.md).
+
+One output folder per chat.
+
+Until now every chat decided for itself where its files went and what they were called, and they ended up next to the input image under different names each time. A chat that produces files now gets one folder of its own, next to the input image: `Fiji_chat_output_<yyyymmdd>_<n>`. The number counts the day's folders in that place and is assigned by the extension, by creating the folder, so two chats never share one and an existing folder is never reused.
+
+What the folder holds:
+
+- `report.md`: the final report as shown in the chat. A later answer in the same chat becomes `report_2.md`.
+- `results/`: the standard result set written by `fiji_analysis_save_bundle` (label TIFF, measurement table with fixed columns, ROIs, QC image, script snapshot). A source image that is an unchanged file on disk is named by path and hash instead of being copied; any other source image, such as a derived or edited one that exists nowhere else, is saved with the set as `source.tif`. A second set goes to `results_2/`.
+- `scripts/`: the script saved with `fiji_script_save_file`, which now defaults to this place.
+- `script_output/`: where the chat's own scripts are asked to write.
+- `process/`: every script the chat actually ran, numbered in run order and saved as it was when the run started, and `steps.md`, a line per tool call. Intermediate images and the model's reasoning are not copied; they remain in the local archive that `manifest.json` names.
+- `manifest.json`: every file with size and hash, who wrote it, the input image, the assistant, and any file a script left next to the input instead, including files in a folder the script created there (up to three folders deep; other chats' output folders are not looked into).
+
+New tool `fiji_output_folder` returns the folder. Macros are not constrained: a script may write wherever it is told. If a saved script contains this chat's folder as a literal path, the save result and the manifest say so, because such a script would write into the old folder when reused.
+
+What does not happen: no folder for a chat that runs no script and saves nothing; no folder when the image was never saved to disk or its folder is not writable (records then stay in the local archive, and the standard result set keeps its previous self-contained form there); nothing written by the extension replaces an existing file; and a failed write of a report, step or manifest never affects a tool result. The feature can be switched off in **LLM Execution Settings**.
+
+Delivered macros stay independent of this extension. The workflow guidance used to tell models to build a delivered label-analysis macro from `fiji_command_macro_template`, whose macro calls this extension and does not run in a Fiji without it. That sentence is gone: models are asked to write ordinary macro code. The tool remains for those who ask for it, and its description now says what its macro requires.
+
+The fixed result format covers 2D label analyses. Other kinds of task get the folder, report, scripts, process records and manifest, with result files named by the model.
+
+Smaller result of `fiji_analysis_save_bundle`. The result used to repeat the label-to-ROI list, one row per object: about 190,000 characters for 4,300 cells, sent again with every later request of the chat. A list of more than 20 rows is now named instead (`roi_labels_note`, with an example row and the row count); the full list stays in the set's `manifest.json`.
+
+Long lists in very large tool results. Tools that list every ROI or every table row return hundreds of thousands of characters for a few thousand objects, and the chat memory sends them again with every later request: in one real task two ROI listings of 520,000 and 550,000 characters travelled with more than a hundred requests. A tool result above 30,000 characters now has its longest JSON lists cut to their first 20 rows before the request is sent, until it fits. Each cut list ends with the number of rows omitted and the total, the result says that it was shortened and where the full one is, and every other field is unchanged. Text is never cut, so scripts and logs arrive whole, and results below the limit are not touched. The full result stays in the local archive, and the step log notes each shortening. It can be switched off in LLM Execution Settings.
+
+Boolean macro options written as 1. A macro variable set to `true` prints as `1`, and SciJava reads the option text `1` as false without any message, so `run("Cellpose...", "... usegpu=" + useGPU)` runs on the CPU. This happened in two real tasks, one of them unnoticed. `fiji_command_parameters` now states that a Boolean option must be the text `true` or `false`. In addition, when a macro started by a chat calls a command with a Boolean option that is neither, the result of `fiji_macro_run` or `fiji_macro_run_status` carries `macro_option_warnings` naming the command and the option, and the chat shows the line. This is an observation only: the option text is read where ImageJ's own macro preprocessor reads it, no input is changed, and a macro behaves exactly as it would without this extension, in a chat or outside one.
+
 ## 0.5.23
 
 Published together with the local versions 0.5.20 to 0.5.22 below. See the [release notes](docs/releases/v0.5.23.md).

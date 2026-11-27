@@ -9,7 +9,7 @@
 助手工具调用轮数上限，默认 **每条用户消息 1000 轮**。它通过 SciJava 服务扩展
 Fiji Chat，无须替换原版 Fiji Chat JAR。
 
-**当前版本：0.5.23。** 这是独立扩展，不是 Fiji 或模型服务商的官方发行版。
+**当前版本：0.6.0。** 这是独立扩展，不是 Fiji 或模型服务商的官方发行版。
 
 
 0.5.23 把 DeepSeek 图像按原图细节发送，通过给出小写的宏参数键名让交付的宏运行时不再弹出设置对话框，新增精确保存脚本文件的工具，进度和最终报告改为中英双语，运行状态工具支持等待而不必反复查询，并修复了思考阶段的停止。详见[发布说明](docs/releases/v0.5.23.zh-CN.md)。
@@ -55,7 +55,9 @@ Fiji Chat，无须替换原版 Fiji Chat JAR。
 - 为耗时模型请求统一配置响应超时。
 - 兼容多模态消息，并在需要时规范化图像工具结果。
 - 可调整这四个服务商的助手工具调用轮数上限。
-- 附带二十四组本地验证，无须真实 API 密钥。
+- 每次对话在输入图像旁有一个自己的输出文件夹：最终报告、标准结果、保存的脚本、实际运行过的每个脚本、步骤记录和清单。详见[工作流工具](docs/zh-CN/WORKFLOW.md)。
+- 超大工具结果里的长列表在发给模型前会被缩短，完整结果保留在本机。详见[上下文预算](docs/zh-CN/CONTEXT.md)。
+- 附带二十七组本地验证，无须真实 API 密钥。
 
 | 服务商 | API 地址 | 协议 | 模型获取方式 |
 | --- | --- | --- | --- |
@@ -117,7 +119,7 @@ SiliconFlow、Volcengine 和 NVIDIA。刷新窗口展示从服务商 API 获取�
 操作，模型必须支持工具调用或函数调用；要查看图像，还需要模型支持图像输入。
 
 已验证环境：Windows 11、Fiji/ImageJ 2.18.0 / ImageJ 1.54p、
-Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.7、LangChain4j 1.21.0。
+Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.13.1、LangChain4j 1.21.0。
 插件编译目标是 Java 17，但这不代表其他依赖组合或操作系统已经验证兼容。
 详见[兼容性和验证记录](docs/zh-CN/VERIFICATION.md)。
 
@@ -127,7 +129,7 @@ Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.7、LangChain4j 1.21.0。
    安装 Fiji Chat。目前使用名为 Fiji-chat 的更新站点：
    https://sites.imagej.net/Fiji-chat/ 。
 2. 保存工作并正常关闭 Fiji。
-3. 从 [GitHub 发布页面](https://github.com/liuhaoqiu/fiji-llm-provider/releases)下载 fiji-llm-provider-0.5.23.jar，可用 SHA256SUMS.txt 校验。
+3. 从 [GitHub 发布页面](https://github.com/liuhaoqiu/fiji-llm-provider/releases)下载 fiji-llm-provider-0.6.0.jar，可用 SHA256SUMS.txt 校验。
 4. 把 JAR 放入 **Fiji 安装目录中的 jars 文件夹**。
    保留属于 Fiji Chat 本体的 fiji-llm-*.jar。
 5. 升级时将旧版 fiji-llm-provider-*.jar 或 fiji-deepseek-provider-*.jar
@@ -219,8 +221,8 @@ DeepSeek 默认请求体限制为 48 MiB，与 1M token 窗口分别管理。
 
     pwsh -NoProfile -File ./build.ps1 -FijiRoot "C:/path/to/Fiji" -JdkHome "C:/path/to/jdk-21"
 
-脚本使用已安装的依赖编译，二十六组验证全部通过后才生成
-build/fiji-llm-provider-0.5.23.jar。超时测试会刻意等待至少 65 秒。
+脚本使用已安装的依赖编译，二十七组验证全部通过后才生成
+build/fiji-llm-provider-0.6.0.jar。超时测试会刻意等待至少 65 秒。
 测试使用本地服务器和合成模型，不操作已打开图像，也不更改已保存的轮数设置。
 详见[构建说明](docs/zh-CN/BUILDING.md)。
 

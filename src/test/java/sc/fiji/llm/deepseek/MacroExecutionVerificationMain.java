@@ -104,7 +104,7 @@ public class MacroExecutionVerificationMain {
                 SwingUtilities.invokeAndWait(()->image.get().close());
                 System.out.println("PASS: actual inherited ImageJ StackWindow selector, renamed idle worker and normal window closure");
             }
-            if(mode.equals("cellpose") || mode.equals("large-cellpose") || mode.equals("baseline-cellpose")) {
+            if(mode.equals("cellpose") || mode.equals("large-cellpose") || mode.equals("baseline-cellpose") || mode.equals("cellpose-option")) {
                 var runner=mode.equals("baseline-cellpose") ? c.service(DefaultScriptExecutionService.class) : svc;
                 String macro="setBatchMode(true); newImage(\"CELLPOSE_FIXTURE\",\"8-bit black\",128,128,1); setForegroundColor(255,255,255); makeOval(25,25,24,24); run(\"Fill\"); makeOval(70,70,24,24); run(\"Fill\"); run(\"Select None\"); run(\"Cellpose...\", \"image_title=CELLPOSE_FIXTURE cp_model=nuclei custom_model= cell_diameter=24 cyto_channel=None nuclei_channel=1 min_size=15 normalize=true resample=true return_rois=true cellprob_threshold=0.0 flow_threshold=0.4 tile_overlap=0.1 niter=0 compute_flows=false shuffle=false labeltype=16-bit mode_3d=None stitch_threshold=0.1 flow3d_smooth=0 torchversion=cu126 usegpu=true\"); print(\"CELLPOSE_FIXTURE_DONE\");";
                 if(mode.equals("large-cellpose")) macro="setBatchMode(true); newImage(\"RGB_CELLPOSE_FIXTURE\",\"RGB black\",3000,3000,1); setForegroundColor(255,0,0); for(y=100;y<2900;y+=180) for(x=100;x<2900;x+=180){makeOval(x,y,90,90); run(\"Fill\");} run(\"Select None\"); run(\"Duplicate...\",\"title=RGB_CELLPOSE_FIXTURE_cp\"); run(\"Make Composite\"); work=getTitle(); run(\"Cellpose...\", \"image_title=[\"+work+\"] cp_model=nuclei custom_model= cell_diameter=35 cyto_channel=None nuclei_channel=1 min_size=200 normalize=true resample=true return_rois=true cellprob_threshold=0.0 flow_threshold=0.4 tile_overlap=0.1 niter=0 compute_flows=false shuffle=false labeltype=16-bit mode_3d=None stitch_threshold=0.1 flow3d_smooth=0 torchversion=cu126 usegpu=true\"); n=roiManager(\"count\"); Table.create(\"FIXTURE_Cellpose_count\"); Table.set(\"Nuclei\",0,n,\"FIXTURE_Cellpose_count\"); Table.update(\"FIXTURE_Cellpose_count\"); print(\"CELLPOSE_FIXTURE_DONE\"); print(\"FIXTURE_ROI_COUNT=\"+n);";
@@ -114,13 +114,21 @@ public class MacroExecutionVerificationMain {
                     int replaceEnd=macro.indexOf("run(\"Select None\");");
                     macro="open(\""+path+"\"); run(\"Size...\",\"width=3000 height=3000 interpolation=Bilinear\"); rename(\"RGB_CELLPOSE_FIXTURE\"); "+macro.substring(replaceEnd);
                 }
+                if(mode.equals("cellpose-option")){macro=macro.replace("usegpu=true","usegpu=1");MacroOptionCheck.drain();}
                 setMacro(editor[0],macro);
                 long start=System.nanoTime();var cp=runner.run(id,ScriptExecutionService.RunKind.MACRO,true).toJson();
-                for(int n=0;n<200 && cp.get("status").getAsString().equals("running");n++) {
+                for(int n=0;n<(mode.equals("cellpose-option")?3000:200) && cp.get("status").getAsString().equals("running");n++) {
                     if(mode.equals("baseline-cellpose") && ij.IJ.getLog()!=null && ij.IJ.getLog().contains("CELLPOSE_FIXTURE_DONE"))break;
                     Thread.sleep(100);cp=runner.status(cp.get("run_id").getAsString(),ScriptExecutionService.RunKind.MACRO).toJson();
                 }
                 System.out.println("CELLPOSE_RESULT mode="+mode+" elapsed_ms="+TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-start)+" "+cp);
+                if(mode.equals("cellpose-option")) {
+                    var notes=MacroOptionCheck.drain();
+                    check(notes.size()==1&&notes.get(0).contains("usegpu=1")&&notes.get(0).contains("Cellpose"),"a real macro call of the real Cellpose command with usegpu=1 is noticed: "+notes);
+                    check(cp.get("status").getAsString().matches("success|finished_with_warnings")&&ij.IJ.getLog().contains("CELLPOSE_FIXTURE_DONE"),"the command itself still ran exactly as the macro asked");
+                    System.out.println("PASS: real macro call with usegpu=1 runs unchanged and is reported: "+notes.get(0));
+                    return;
+                }
                 if(mode.equals("cellpose") || mode.equals("large-cellpose")) {
                     check(cp.get("status").getAsString().matches("success|finished_with_warnings") && ij.IJ.getLog()!=null && ij.IJ.getLog().contains("CELLPOSE_FIXTURE_DONE"),"real Cellpose macro must finish");
                     if(mode.equals("large-cellpose") && !fixture.isBlank())

@@ -39,6 +39,13 @@ public final class WorkflowVerificationMain {
                 try{CommandBridge.execute(context,Fixture.class.getName(),JsonParser.parseString(invalid).getAsJsonObject(),source.getID());throw new AssertionError("invalid input accepted");}catch(IllegalArgumentException|ArithmeticException expected){}
             }
             check(executions.get()==1,"invalid inputs never reach command body");
+            // A macro boolean prints as 1 and is read as false: the check must say so and stay silent otherwise.
+            var fixtureInfo=context.service(CommandService.class).getCommand(Fixture.class);
+            check(context.service(PluginService.class).getPlugin(MacroOptionCheck.class)!=null,"the option check is registered as a preprocessor");
+            var asOne=MacroOptionCheck.check(fixtureInfo,name->name.equals("useGPU")?"1":name.equals("diameter")?"1":null);
+            check(asOne.size()==1&&asOne.get(0).contains("usegpu=1")&&asOne.get(0).contains("read as false")&&asOne.get(0).contains("usegpu=true"),"usegpu=1 is reported with the fix, and a number option equal to 1 is not: "+asOne);
+            for(String fine:new String[]{"true","false","TRUE","False"}){String value=fine;check(MacroOptionCheck.check(fixtureInfo,name->name.equals("useGPU")?value:null).isEmpty(),"no note for "+fine);}
+            check(MacroOptionCheck.check(fixtureInfo,name->null).isEmpty(),"an option that is not given is not this check's business");
             // An extracted channel may be preprocessed before a command runs on it; the receipt says so.
             int baseline=executions.get();
             var raw=ImageEvidence.extract(new ij.ImagePlus("PREPROCESS_FIXTURE",new ij.process.ColorProcessor(8,8)),2);raw.show();
@@ -111,6 +118,11 @@ public final class WorkflowVerificationMain {
         nested[0]=true;finished[0]="success";runMillis[0]=600;
         var script=ask.apply("fiji_script_run_status","{\"run_id\":\"r\"}");
         check(script.getAsJsonObject("ran_script").get("status").getAsString().equals("success")&&calls.get()>=2,"nested script status is waited for as well");
+        nested[0]=false;runMillis[0]=0;finished[0]="success";MacroOptionCheck.drain();MacroOptionCheck.add("NOTE_A");MacroOptionCheck.add("NOTE_A");
+        var noted=ask.apply("fiji_macro_run_status","{\"run_id\":\"r\",\"wait_seconds\":0}");
+        check(noted.getAsJsonArray("macro_option_warnings").size()==1&&noted.getAsJsonArray("macro_option_warnings").get(0).getAsString().equals("NOTE_A"),"a macro option note reaches the model with the run status, once");
+        check(!ask.apply("fiji_macro_run_status","{\"run_id\":\"r\",\"wait_seconds\":0}").has("macro_option_warnings"),"and is not repeated");
+        MacroOptionCheck.add("NOT_FOR_COMMANDS");check(!ask.apply("fiji_command_run_status","{\"run_id\":\"r\",\"wait_seconds\":0}").has("macro_option_warnings"),"notes are shown with macro runs only");MacroOptionCheck.drain();
         nested[0]=false;runMillis[0]=60_000;
         for(String bad:List.of("{\"run_id\":\"r\",\"wait_seconds\":31}","{\"run_id\":\"r\",\"wait_seconds\":-1}","{\"run_id\":\"r\",\"wait_seconds\":\"soon\"}"))
             check(ask.apply("fiji_macro_run_status",bad).has("error")&&calls.get()==0,"an invalid wait is rejected before the run is queried: "+bad);

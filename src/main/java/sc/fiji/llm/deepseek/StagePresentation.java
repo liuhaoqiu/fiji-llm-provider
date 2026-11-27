@@ -67,6 +67,8 @@ final class StagePresentation {
         JsonObject value;
         try {value=JsonParser.parseString(textContents(execution)).getAsJsonObject();}
         catch(RuntimeException ignored){return;} // raw diagnostics stay in the activity log
+        if(value.has("macro_option_warnings")&&value.get("macro_option_warnings").isJsonArray())
+            for(var warning:value.getAsJsonArray("macro_option_warnings"))stage("宏参数提醒 / Macro option warning: "+warning.getAsString());
         if(value.has("script_execution_evidence"))validation(value.getAsJsonObject("script_execution_evidence"));
         else if(name.equals("fiji_script_validation_status")&&value.has("current_sha256"))validation(value);
         JsonObject statusValue=value;
@@ -107,6 +109,22 @@ final class StagePresentation {
             if(!reason.isBlank()){reason=reason.replace('\r',' ').replace('\n',' ').replace('`','\'');detail=" 原因 / Reason: `"+reason.substring(0,Math.min(reason.length(),320))+"`。完整错误见运行日志 / Full error in activity log.";}
         }
         if(!description.isBlank())stage(description+(script.isBlank()?"":" — `"+script.replace("`","")+"`")+(id.isBlank()?"":" (`"+id.replace("`","")+"`)")+"。"+detail);
+    }
+    /** What the step log says about a finished tool call: name, state, run and script, and a short error. No arguments or results. */
+    static String stepLine(ToolExecution execution){
+        String name=execution.request().name();var line=new StringBuilder("`"+name+"`");
+        try{
+            JsonObject value=JsonParser.parseString(textContents(execution)).getAsJsonObject();
+            for(String key:List.of("ran_script","ran_macro","ran_command"))if(value.has(key)&&value.get(key).isJsonObject()){value=value.getAsJsonObject(key);break;}
+            String status=string(value,"status"),script=string(value,"script_name"),run=string(value,"run_id");
+            String error=string(value,"error_dialog");if(error.isBlank())error=string(value,"error");if(error.isBlank())error=string(value,"errors");
+            if(execution.hasFailed()&&status.isBlank())status="failed";
+            if(!status.isBlank())line.append(" ").append(status);
+            if(!script.isBlank())line.append(" - ").append(script);
+            if(!run.isBlank())line.append(" (").append(run).append(")");
+            if(!error.isBlank())line.append(" - ").append(error.replace('\r',' ').replace('\n',' '),0,Math.min(error.length(),240));
+        }catch(RuntimeException notJson){if(execution.hasFailed())line.append(" failed");}
+        return line.toString();
     }
     private static String string(JsonObject object,String name){
         return object.has(name)&&object.get(name).isJsonPrimitive()?object.get(name).getAsString():"";

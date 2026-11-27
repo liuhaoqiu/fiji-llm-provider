@@ -134,6 +134,7 @@ final class ProgressAssistant {
                     context.archive.store(paused);
                     if (memory != null) memory.add(paused);
                     presentation.finish(checkpoint, true);
+                    observeDisplay(()->context.output.step("task paused before completion; no final report was written"));
                     if (complete != null) complete.accept(ChatResponse.builder().aiMessage(paused).build());
                 } else if (error != null) error.accept(failure);
             }
@@ -204,6 +205,7 @@ final class ProgressAssistant {
                             if (terminal.get()) return;
                             observeDisplay(()->activity.toolFinished(tool.request().id(), tool.request().name()));
                             observeDisplay(()->presentation.tool(tool));
+                            if(!tool.request().name().equals(StageReporting.NAME))observeDisplay(()->context.output.step(StagePresentation.stepLine(tool)));
                             if (afterTool != null) afterTool.accept(tool);
                         });
                         delegate.onPartialToolCallWithContext((part, ctx) -> {
@@ -232,6 +234,7 @@ final class ProgressAssistant {
                             stopMonitoring();
                             context.archive.store(response.aiMessage());
                             presentation.finish(message.text(), false);
+                            observeDisplay(()->context.output.report(message.text()));
                             if (complete != null) complete.accept(response);
                         });
                         delegate.onError(this::failed);

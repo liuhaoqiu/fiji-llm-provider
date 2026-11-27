@@ -85,6 +85,7 @@ public final class DeliveryVerificationMain {
     static void gui()throws Exception{
         var context=MacroExecutionVerificationMain.fixtureContext();var budget=new BoundedContext(24000,1_048_576);
         var original=new LinkedHashMap<ToolSpecification,ToolExecutor>();for(String n:List.of("fiji_script_create","fiji_script_replace_content"))original.put(ToolSpecification.builder().name(n).description("old fixture").parameters(JsonObjectSchema.builder().build()).build(),(a,b)->{throw new AssertionError("old active-tab executor invoked");});
+        original.put(ToolSpecification.builder().name("fiji_macro_run").description("fixture run").parameters(JsonObjectSchema.builder().build()).build(),(a,b)->"{\"run_id\":\"g1\",\"status\":\"success\"}");
         var tools=WorkflowTools.tools(original,()->context,budget);
         var created=call(tools,"fiji_script_create","{\"script_name\":\"delivered.ijm\",\"language\":\"ImageJ Macro\",\"content\":\"print(\\\"FIRST\\\");\"}");check(!created.has("error"),"explicit macro creation: "+created);
         String handle=created.get("script_handle").getAsString(),hash=created.get("current_sha256").getAsString(),id=created.get("script_id").getAsString();
@@ -98,6 +99,9 @@ public final class DeliveryVerificationMain {
         check(call(tools,"fiji_script_save_file",fileArgs.toString()).has("error"),"registered save tool refuses to replace an existing file");
         fileArgs.addProperty("expected_sha256",hash);fileArgs.addProperty("overwrite",true);
         check(call(tools,"fiji_script_save_file",fileArgs.toString()).has("error")&&Files.readString(scriptFile).equals(content),"stale hash rejected before any write");
+        check(call(tools,"fiji_macro_run","{}").get("status").getAsString().equals("success"),"wrapped run tool returns the run result");
+        Path keptScript=budget.archive.directory.resolve("output-staging/process/scripts/01_cleanup.groovy");
+        check(Files.isRegularFile(keptScript)&&Files.readString(keptScript).equals("OTHER"),"the active editor tab is saved as it was when the run started; with no saved image it stays in the local archive");
         var inactive=sc.fiji.llm.ui.TextEditorUtils.getActiveScriptID();check(inactive.toString().equals(other.get("script_id").getAsString()),"edit does not switch active tab");
         check(call(tools,"fiji_script_replace_content","{\"content\":\"WRONG_TAB\"}").has("error"),"legacy active-tab fallback rejected");
         var active=ScriptTargets.read(other.get("script_id").getAsString());check(active.get("content").getAsString().equals("OTHER"),"other tab not changed");

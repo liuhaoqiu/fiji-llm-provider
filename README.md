@@ -10,7 +10,7 @@ API-key manager, and provides a configurable assistant tool-round limit with a
 default of **1000 rounds per user message**. It extends Fiji Chat through SciJava
 services; it does not replace the original Fiji Chat JAR.
 
-**Current version: 0.5.23.** This is an independent extension, not an official
+**Current version: 0.6.0.** This is an independent extension, not an official
 release from Fiji or any model provider.
 
 
@@ -63,7 +63,9 @@ assistant conversation.
 - Shared response timeout configuration for long model requests.
 - Multimodal message handling and image-tool normalization where required.
 - A configurable tool-calling round limit for the four added providers.
-- Twenty-four local verification suites requiring no live API key, plus optional real macro/Cellpose integration checks.
+- One output folder per chat next to the input image: the final report, a standard result set, saved scripts, every script that was run, a step log and a manifest. See [workflow tools](docs/WORKFLOW.md).
+- Long lists in very large tool results are shortened before they are sent to the model; the full result stays on your computer. See [context budgets](docs/CONTEXT.md).
+- Twenty-seven local verification suites requiring no live API key, plus optional real macro/Cellpose integration checks.
 
 | Provider | API base | Protocol | Model discovery |
 | --- | --- | --- | --- |
@@ -131,7 +133,7 @@ calling to perform Fiji actions; image input additionally requires a suitable
 vision-capable model.
 
 The verified environment is Windows 11, Fiji/ImageJ 2.18.0 / ImageJ 1.54p,
-Fiji Chat `0.2.0-SNAPSHOT`, Java 21.0.7, and LangChain4j 1.21.0. The extension is
+Fiji Chat `0.2.0-SNAPSHOT`, Java 21.0.13.1, and LangChain4j 1.21.0. The extension is
 compiled for Java 17, but that does not establish compatibility with other Fiji
 dependency sets or operating systems. See [compatibility and verification](docs/VERIFICATION.md).
 
@@ -142,7 +144,7 @@ dependency sets or operating systems. See [compatibility and verification](docs/
    It currently uses the `Fiji-chat` update site at
    `https://sites.imagej.net/Fiji-chat/`.
 2. Save your work and **close Fiji**.
-3. Download `fiji-llm-provider-0.5.23.jar` from the [Releases page](https://github.com/liuhaoqiu/fiji-llm-provider/releases).
+3. Download `fiji-llm-provider-0.6.0.jar` from the [Releases page](https://github.com/liuhaoqiu/fiji-llm-provider/releases).
    Optionally compare its SHA-256 with `SHA256SUMS.txt` in the same release.
 4. Copy the JAR into the **`jars` directory inside your Fiji installation**.
    Do not replace `fiji-llm-*.jar`, which belongs to Fiji Chat itself.
@@ -259,8 +261,8 @@ If the bundled JDK cannot be found, supply it explicitly:
 pwsh -NoProfile -File .\build.ps1 -FijiRoot "C:\path\to\Fiji" -JdkHome "C:\path\to\jdk-21"
 ```
 
-The script compiles against Fiji's installed JARs, runs all twenty-six verification
-suites, and writes `build/fiji-llm-provider-0.5.23.jar` only after they pass.
+The script compiles against Fiji's installed JARs, runs all twenty-seven verification
+suites, and writes `build/fiji-llm-provider-0.6.0.jar` only after they pass.
 The timeout suite deliberately waits at least 65 seconds. Tests use local
 servers and synthetic models/tools; they do not process your open images or
 change your saved tool-round preference. See [Building](docs/BUILDING.md).

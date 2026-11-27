@@ -99,6 +99,9 @@ public class ProviderAssistantService extends DefaultAssistantService {
         context.label = providerName + " / " + modelName + "\nTotal model window: " + window +
             "; reserved output: " + output + "; context source: " + hosted.contextWindowSource(modelName);
         context.imageTokenAllowance = providerName.equals("DeepSeek") ? 1024 : 16384;
+        context.output.enabled = AssistantExecutionSettings.outputFolder(prefs);
+        context.shortenLists = AssistantExecutionSettings.shortenLists(prefs);
+        context.output.label = providerName + " / " + modelName;
         ChatMemory workingMemory = chatMemory == null ? null : context.archive.wrap(chatMemory);
         context.workingMemory = workingMemory;
         builder.tools(WorkflowTools.tools(UiAutomationTools.tools(StageReporting.tools(tools.getToolsWithExecutors(), context),

@@ -36,7 +36,18 @@ final class AnalysisBundle {
         return result;
     }
     static ImagePlus copy(ImagePlus image){var c=new ImagePlus(image.getTitle(),image.getProcessor().duplicate());c.setCalibration(image.getCalibration().copy());return c;}
+    /** Complete, self-contained set in a new unique directory under root, including the raw source TIFF. */
     static JsonObject save(ImagePlus source,ImagePlus labels,int channel,ScriptTargets.Snapshot script,Path root)throws Exception{
+        return write(source,labels,channel,script,root,null,true);
+    }
+    /**
+     * The same set into an existing empty directory in the chat folder. The measured source is copied unless it is an
+     * unchanged file on disk, which is then named by path and hash: a derived image exists nowhere else.
+     */
+    static JsonObject saveResults(ImagePlus source,ImagePlus labels,int channel,ScriptTargets.Snapshot script,Path directory)throws Exception{
+        return write(source,labels,channel,script,null,directory,ChatOutput.sourceFile(source)==null);
+    }
+    private static JsonObject write(ImagePlus source,ImagePlus labels,int channel,ScriptTargets.Snapshot script,Path root,Path into,boolean withSource)throws Exception{
         ImageEvidence.plane(source);ImageEvidence.plane(labels);ImageEvidence.checkInput(source);
         if(source==labels)throw new IllegalArgumentException("Source and label image must differ");
         String sh=ImageEvidence.hash(source),lh=ImageEvidence.hash(labels);
@@ -45,19 +56,21 @@ final class AnalysisBundle {
             throw new IllegalStateException("Images changed during snapshot; no bundle saved");
         var measurement=ImageEvidence.measure(sourceCopy,labelCopy,channel);var rois=rois(labelCopy);
         if(rois.size()!=measurement.summary.get("object_count").getAsInt())throw new IllegalStateException("ROI/label count mismatch");
-        Files.createDirectories(root);Path directory=Files.createTempDirectory(root,"analysis-").toAbsolutePath();
+        Path directory;
+        if(into==null){Files.createDirectories(root);directory=Files.createTempDirectory(root,"analysis-").toAbsolutePath();}
+        else{directory=into.toAbsolutePath();try(var existing=Files.list(directory)){if(existing.findAny().isPresent())throw new IOException("Result directory is not empty: "+directory);}}
         try{
             String filename=Path.of(script.name()).getFileName().toString();if(filename.equals(".")||filename.equals("..")||filename.isBlank()||filename.matches(".*[\\\\/:*?\"<>|].*"))filename="script.txt";
             Files.createDirectory(directory.resolve("script"));filename="script/"+filename;
             Files.writeString(directory.resolve(filename),script.content(),StandardCharsets.UTF_8,StandardOpenOption.CREATE_NEW);
-            if(!new FileSaver(sourceCopy).saveAsTiff(directory.resolve("source.tif").toString())||!new FileSaver(labelCopy).saveAsTiff(directory.resolve("labels.tif").toString()))throw new IOException("TIFF write failed");
+            if(withSource&&!new FileSaver(sourceCopy).saveAsTiff(directory.resolve("source.tif").toString())||!new FileSaver(labelCopy).saveAsTiff(directory.resolve("labels.tif").toString()))throw new IOException("TIFF write failed");
             if(!new FileSaver(measurement.overlay.flatten()).saveAsTiff(directory.resolve("qc.tif").toString()))throw new IOException("QC write failed");
             if(rois.isEmpty())Files.writeString(directory.resolve("measurements.csv"),"Label,Area_pixels,Mean_source_intensity,Centroid_x_pixels,Centroid_y_pixels,Touches_border\n",StandardCharsets.UTF_8);else measurement.table.saveAs(directory.resolve("measurements.csv").toString());var mapping=new JsonArray();
             try(var zip=new ZipOutputStream(Files.newOutputStream(directory.resolve("rois.zip"),StandardOpenOption.CREATE_NEW))){
                 for(var r:rois){String entry=r.roi.getName()+".roi";zip.putNextEntry(new ZipEntry(entry));byte[] bytes=RoiEncoder.saveAsByteArray(r.roi);if(bytes==null)throw new IOException("ROI encode failed");zip.write(bytes);zip.closeEntry();
                     var row=new JsonObject();row.addProperty("label",r.label);row.addProperty("zip_entry",entry);mapping.add(row);}
             }
-            var files=new JsonArray();for(String name:List.of(filename,"source.tif","labels.tif","qc.tif","measurements.csv","rois.zip")){
+            var files=new JsonArray();for(String name:withSource?List.of(filename,"source.tif","labels.tif","qc.tif","measurements.csv","rois.zip"):List.of(filename,"labels.tif","qc.tif","measurements.csv","rois.zip")){
                 Path p=directory.resolve(name);if(!Files.isRegularFile(p)||(Files.size(p)==0&&!name.equals(filename)))throw new IOException("Missing saved artifact: "+name);
                 var row=new JsonObject();row.addProperty("name",name);row.addProperty("path",p.toString());row.addProperty("bytes",Files.size(p));row.addProperty("sha256",fileHash(p));files.add(row);
             }
@@ -66,7 +79,9 @@ final class AnalysisBundle {
             manifest.addProperty("roi_count",rois.size());manifest.add("roi_labels",mapping);manifest.addProperty("roi_policy","one ROI per unique nonzero label, including disconnected parts/holes; no size filter; global ROI Manager unchanged");
             manifest.addProperty("script_sha256",ScriptValidation.hash(script.content()));manifest.add("script_execution_evidence",script.evidence());
             manifest.addProperty("script_saved_as_snapshot",true);manifest.addProperty("global_results_and_roi_manager_unchanged",true);
-            manifest.addProperty("note","Artifact images are explicit selections; script execution evidence does not certify that it produced those images. Saved artifacts and matching script bytes do not certify clean-state replay or scientific correctness. Source TIFF contains raw source pixels without its display overlays.");
+            manifest.addProperty("source_pixels_sha256",sh);manifest.addProperty("source_title",source.getTitle());manifest.addProperty("source_copied",withSource);
+            var origin=source.getOriginalFileInfo();if(origin!=null&&origin.directory!=null&&origin.fileName!=null)manifest.addProperty("source_file",origin.directory+origin.fileName);
+            manifest.addProperty("note","Artifact images are explicit selections; script execution evidence does not certify that it produced those images. Saved artifacts and matching script bytes do not certify clean-state replay or scientific correctness. "+(withSource?"Source TIFF contains raw source pixels without its display overlays.":"The source image is an unchanged file on disk and is not copied; source_file names it and source_pixels_sha256 identifies the pixels that were measured."));
             Path mp=directory.resolve("manifest.json");Files.writeString(mp,new GsonBuilder().setPrettyPrinting().create().toJson(manifest),StandardCharsets.UTF_8,StandardOpenOption.CREATE_NEW);
             var response=manifest.deepCopy();response.addProperty("manifest_file",mp.toString());response.addProperty("manifest_sha256",fileHash(mp));return response;
         }catch(Exception failure){try{Files.writeString(directory.resolve("INCOMPLETE.txt"),"Export incomplete: "+failure,StandardCharsets.UTF_8,StandardOpenOption.CREATE_NEW);}catch(IOException ignored){}throw new IOException("Bundle export incomplete at "+directory+": "+failure.getMessage(),failure);}

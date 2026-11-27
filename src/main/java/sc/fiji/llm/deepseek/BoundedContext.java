@@ -17,11 +17,15 @@ import dev.langchain4j.model.chat.request.ChatRequest;
  */
 final class BoundedContext {
     final ContextArchive archive = new ContextArchive();
+    final ChatOutput output = new ChatOutput(archive.directory);
     final long inputLimit, byteLimit;
     volatile Consumer<String> progress = text -> {};
     volatile Consumer<String> stageOutput = text -> {};
     volatile String latestCheckpoint = "";
     volatile boolean cancelled;
+    /** Whether long lists in very large tool results are shortened before a request is sent. */
+    volatile boolean shortenLists = true;
+    private final Set<String> shortenedResults = java.util.concurrent.ConcurrentHashMap.newKeySet();
     volatile Runnable requestStarting = () -> {};
     String label = "LLM task";
     int imageTokenAllowance = 16384;
@@ -36,6 +40,26 @@ final class BoundedContext {
         this.byteLimit = byteLimit;
     }
 
+    /** Replaces very large tool results by a copy whose long lists are cut; the same request if there is none. */
+    ChatRequest shortenLongLists(ChatRequest request) {
+        if (!shortenLists) return request;
+        List<ChatMessage> changed = null;
+        var messages = request.messages();
+        for (int i = 0; i < messages.size(); i++) {
+            if (!(messages.get(i) instanceof ToolExecutionResultMessage tool) || !tool.hasSingleText()
+                || tool.text().length() <= LongLists.LIMIT) continue;
+            String stored = archive.store(tool);
+            String shorter = LongLists.shorten(tool.text(), archive.directory.resolve(stored).toString());
+            if (shorter == null) continue;
+            if (changed == null) changed = new ArrayList<>(messages);
+            changed.set(i, tool.toBuilder().contents(List.of(TextContent.from(shorter))).build());
+            if (shortenedResults.add(String.valueOf(tool.id())))
+                output.step("long lists in the result of `" + tool.toolName() + "` were shortened for the model: " +
+                    tool.text().length() + " -> " + shorter.length() + " characters; full result in " + stored);
+        }
+        return changed == null ? request : request.toBuilder().messages(changed).build();
+    }
+
     ChatRequest prepare(ChatRequest request) {
         if (cancelled) throw new java.util.concurrent.CancellationException("Stopped by user");
         requestStarting.run();
@@ -45,6 +69,9 @@ final class BoundedContext {
         var source = request.messages();
         lastRequest = request;
         archive.snapshot(source);
+        // The archive now holds every result in full; what is sent may carry shorter lists.
+        var listed = shortenLongLists(request);
+        if (listed != request) { request = listed; source = request.messages(); lastRequest = request; }
         ContextMonitor.preflight(label, RequestBudget.estimatedTokens(request, imageTokenAllowance), inputLimit, byteLimit, archive.directory.toString());
         var task = archive.task();
         if (!over(request)) {

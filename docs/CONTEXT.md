@@ -147,3 +147,13 @@ empty user request. Compaction identifies token pressure versus body-byte pressu
 the body soft trigger is now 90%, leaving headroom for actual transport encoding.
 These checks preserve task content but cannot guarantee that a hosted model will
 always follow it. Live scientific workflow results still require verification.
+
+## Long lists in very large tool results (0.6.0)
+
+Some tools list every ROI or every table row. For a few thousand objects that is hundreds of thousands of characters, and the chat memory sends them again with every later request: in one real task two ROI listings of 520,000 and 550,000 characters travelled with more than a hundred requests.
+
+Before a request is sent, a tool result above 30,000 characters has its longest JSON lists cut to their first 20 rows, until it fits. Each cut list ends with `rows_omitted_here` and `rows_in_total`, and the result gains `result_shortened`, which says that the rows shown are not all rows and names the archived file with the full result. Every other field is unchanged.
+
+Text is never cut, inside JSON or not, so a script or a log arrives whole. Results at or below the limit are not looked at. The local archive keeps the full result, and the step log of the chat's output folder notes each shortening. This is separate from automatic context organization, which summarizes older history when a budget is nearly reached.
+
+The setting **Shorten very long lists in tool results sent to the model** in **Help → Assistants → LLM Execution Settings** switches it off. It is on by default.

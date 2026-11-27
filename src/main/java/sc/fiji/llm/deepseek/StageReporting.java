@@ -39,6 +39,7 @@ final class StageReporting {
             String message=value.get("message").getAsString().strip();
             if(message.isBlank() || message.length()>2000)throw new IllegalArgumentException("message must contain 1 to 2000 characters");
             context.stageOutput.accept(message);
+            context.output.step("progress: "+(message.length()>400?message.substring(0,400)+" ...":message));
             return "{\"reported\":true,\"continue_task\":true}";
         });
         return result;

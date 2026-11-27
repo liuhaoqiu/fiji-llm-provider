@@ -13,7 +13,7 @@ https://sites.imagej.net/Fiji-chat/ ，添加并更新后需重启 Fiji。
 本扩展依赖 Fiji Chat，不是独立聊天程序，也不包含 Fiji 或 LangChain4j。
 
 本版本在 Windows 11、Fiji/ImageJ 2.18.0 / ImageJ 1.54p、
-Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.7、LangChain4j 1.21.0 上构建并验证。
+Fiji Chat 0.2.0-SNAPSHOT、Java 21.0.13.1、LangChain4j 1.21.0 上构建并验证。
 其他组合未验证；同名 SNAPSHOT 文件也可能包含不同代码，详见
 [验证记录](VERIFICATION.md)。
 

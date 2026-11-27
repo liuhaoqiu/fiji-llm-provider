@@ -21,7 +21,7 @@ pwsh -NoProfile -File .\build.ps1 -FijiRoot "C:\path\to\Fiji" -JdkHome "C:\path\
 
 Without `-JdkHome`, the script looks for a bundled Fiji JDK, then `JAVA_HOME`, then
 `javac.exe` on `PATH`. It requires JDK 21 or newer for the supplied packaging
-procedure. Only JDK 21.0.7 was used for release verification.
+procedure. JDK 21.0.13.1 was used for the 0.6.0 release verification, and JDK 21.0.7 for the releases before it.
 
 The script does not download dependencies, install the result into Fiji, restart
 Fiji, or change API keys and saved tool-round settings. The tests run in separate
@@ -29,10 +29,10 @@ Java processes with synthetic inputs and loopback HTTP servers.
 
 ## Build outputs
 
-After all twenty-six suites pass, the output is:
+After all twenty-seven suites pass, the output is:
 
 ```text
-build/fiji-llm-provider-0.5.23.jar
+build/fiji-llm-provider-0.6.0.jar
 ```
 
 Intermediate classes and Java argument files are kept under a fresh

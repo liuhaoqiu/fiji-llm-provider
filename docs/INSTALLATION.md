@@ -14,7 +14,7 @@ extension. Fiji LLM Provider depends on Fiji Chat; it is not a standalone chat
 application and does not include Fiji or LangChain4j.
 
 The release was built and tested with Windows 11, Fiji/ImageJ 2.18.0 / ImageJ
-1.54p, Fiji Chat 0.2.0-SNAPSHOT, Java 21.0.7 and LangChain4j 1.21.0. Other
+1.54p, Fiji Chat 0.2.0-SNAPSHOT, Java 21.0.13.1 and LangChain4j 1.21.0. Other
 combinations are unverified. In particular, the `SNAPSHOT` name alone does not
 identify identical upstream bytes; see [Verification](VERIFICATION.md).
 

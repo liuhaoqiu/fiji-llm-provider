@@ -56,6 +56,12 @@ public final class UiAutomationVerificationMain {
             check(capitalised.contains(name)==(ij.Macro.getValue(byName.toString(),name,null)==null),"written with its capitals an input is not found, which is what opens the dialog: "+name);
         }
         check(data.get("macro_options").getAsString().contains("lower-case"),"the result states the macro rule next to the keys");
+        // A macro boolean prints as 1, and SciJava reads the option text "1" as false: usegpu=1 silently runs on the CPU.
+        try(var booleans=new org.scijava.Context(org.scijava.convert.ConvertService.class)){
+            var convert=booleans.service(org.scijava.convert.ConvertService.class);
+            check(Boolean.TRUE.equals(convert.convert("true",Boolean.class))&&Boolean.FALSE.equals(convert.convert("1",Boolean.class)),"option text 1 is not true for a Boolean input");
+        }
+        check(data.get("macro_options").getAsString().contains("write the text true or false"),"the result warns that a Boolean option must be written as text");
     }
     static JsonObject row(String title,String label)throws Exception{
         for(var item:registry.windows("").getAsJsonArray("windows")){

@@ -55,3 +55,26 @@ Macro run receipts now include `new_images_observed` and `active_image_observed`
 The ROI ZIP contains one ROI for each unique nonzero label, retaining disconnected parts, holes and legitimate one-pixel labels. It does not apply an area cutoff or clear/append global ROI Manager. Existing global Results and source pixels/selections are retained. Macro scaffolds set `return_ROIs=false` when that input exists; use the bundle's canonical ROI set instead of resetting global ROI Manager. Other direct third-party command calls still honor the inputs requested by the assistant.
 
 Exports use fresh folders and avoid overwriting existing files. `manifest.json` is written after all artifacts succeed; failed partial exports retain an `INCOMPLETE.txt` marker and return an error. An export is a snapshot of explicit image selections and current script bytes; it does not prove those images were produced by that script, a clean-state replay or scientific correctness. These helpers support one 2D plane; they do not silently flatten a stack into one plane.
+
+## 0.6.0: one output folder per chat
+
+A chat that produces files gets one folder next to the input image, `Fiji_chat_output_<yyyymmdd>_<n>`. The number counts the day's folders in that place and is assigned by creating the folder, so a folder is never shared or reused. `fiji_output_folder` returns it and creates it on first use; a script run creates it as well. A chat that runs no script and saves nothing gets no folder.
+
+| Entry | Content |
+| --- | --- |
+| `report.md` | The final report as shown in the chat. A later answer becomes `report_2.md`. |
+| `results/` | The standard result set of `fiji_analysis_save_bundle`. A second set goes to `results_2/`. |
+| `scripts/` | The script saved with `fiji_script_save_file`, which defaults to this place. |
+| `script_output/` | Where the chat's own scripts are asked to write. |
+| `process/` | Every script the chat ran, numbered in run order and saved as it was when the run started, and `steps.md`, one line per tool call. |
+| `manifest.json` | Every file with size and hash, who wrote it, the input image, the assistant, the local archive that holds the full record, and files a script left next to the input. |
+
+In the chat folder the standard result set names a source image that is an unchanged file on disk by path and pixel hash instead of copying it. Any other source image, such as a derived copy that exists only in memory, is saved with the set as `source.tif`. The result returned to the model names the label-to-ROI list instead of repeating it when it has more than 20 rows; the full list is in the set's `manifest.json`.
+
+Macros are not constrained. A script may write wherever it is told; files it leaves next to the input, including files in a folder it created there (up to three folders deep), are listed in the manifest under `new_files_next_to_the_input`. A saved script that contains this chat's folder as a literal path is reported, because it would write into the old folder when reused. Models are asked to deliver ordinary macro code that does not depend on this extension.
+
+If the image was never saved to disk or its folder is not writable, no folder is created: records stay in the local archive and the standard result set keeps its self-contained form there. Nothing the extension writes replaces an existing file, and a failed write of a report, step or manifest never affects the analysis. The feature can be switched off in **Help → Assistants → LLM Execution Settings**.
+
+## 0.6.0: Boolean options in macros
+
+In a macro, `run("Command...", options)` passes text. A macro variable set to `true` prints as `1`, and SciJava reads the option text `1` as false without any message: `usegpu=1` runs on the CPU. `fiji_command_parameters` states that a Boolean option must be the text `true` or `false`. When a macro started by a chat passes anything else for a Boolean input, the result of `fiji_macro_run` or `fiji_macro_run_status` carries `macro_option_warnings`. This check only observes; it changes no input, and macros run exactly as they would without this extension.

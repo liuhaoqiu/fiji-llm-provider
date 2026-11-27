@@ -17,6 +17,8 @@ public final class AssistantExecutionSettings {
     static final String INPUT_TOKENS_KEY = "maxInputTokens";
     static final String REQUEST_MIB_KEY = "maxRequestMiB";
     static final String OUTPUT_RESERVE_KEY = "outputReserveTokens";
+    static final String OUTPUT_FOLDER_KEY = "chatOutputFolder";
+    static final String SHORTEN_LISTS_KEY = "shortenLongLists";
 
     private AssistantExecutionSettings() {}
 
@@ -44,6 +46,24 @@ public final class AssistantExecutionSettings {
         save(prefs, rounds);
         prefs.put(AssistantExecutionSettings.class, INPUT_TOKENS_KEY, tokens);
         prefs.put(AssistantExecutionSettings.class, REQUEST_MIB_KEY, mib);
+    }
+
+    /** Whether each chat gets its own Fiji_chat_output folder next to the input image. On unless switched off. */
+    public static boolean outputFolder(PrefService prefs) {
+        return prefs == null || prefs.getInt(AssistantExecutionSettings.class, OUTPUT_FOLDER_KEY, 1) != 0;
+    }
+
+    /** Whether long lists in very large tool results are shortened before they are sent to the model. On unless switched off. */
+    public static boolean shortenLists(PrefService prefs) {
+        return prefs == null || prefs.getInt(AssistantExecutionSettings.class, SHORTEN_LISTS_KEY, 1) != 0;
+    }
+
+    public static void saveShortenLists(PrefService prefs, boolean enabled) {
+        prefs.put(AssistantExecutionSettings.class, SHORTEN_LISTS_KEY, enabled ? 1 : 0);
+    }
+
+    public static void saveOutputFolder(PrefService prefs, boolean enabled) {
+        prefs.put(AssistantExecutionSettings.class, OUTPUT_FOLDER_KEY, enabled ? 1 : 0);
     }
 
     public static int roundTrips(PrefService prefs) {

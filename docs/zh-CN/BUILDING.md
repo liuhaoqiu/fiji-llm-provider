@@ -15,16 +15,16 @@
     pwsh -NoProfile -File ./build.ps1 -FijiRoot "C:/path/to/Fiji" -JdkHome "C:/path/to/jdk-21"
 
 不指定 JdkHome 时，依次查找 Fiji 自带 JDK、JAVA_HOME、PATH 中的 javac.exe。
-此打包流程要求 JDK 21 或更新版本；本次发行实际验证使用 21.0.7。
+此打包流程要求 JDK 21 或更新版本；0.6.0 的发行验证使用 21.0.13.1，此前各版使用 21.0.7。
 
 脚本不下载依赖，不安装生成文件，不重启 Fiji，不修改 API 密钥或已保存轮数。
 测试在独立 Java 进程中运行，使用合成输入和回环地址 HTTP 服务器。
 
 ## 输出
 
-二十六组验证全部通过后生成：
+二十七组验证全部通过后生成：
 
-    build/fiji-llm-provider-0.5.23.jar
+    build/fiji-llm-provider-0.6.0.jar
 
 中间类文件和 Java 参数文件放在新的 build/run-.../ 目录中，避免旧类混入新 JAR。
 编译和测试类路径排除所有已安装的本扩展版本。参数文件用于避开 Windows 命令长度限制。

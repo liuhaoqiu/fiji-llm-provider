@@ -8,3 +8,4 @@
 {"class":"sc.fiji.llm.deepseek.ShowContextStatus","values":{"menuPath":"Help>Assistants>LLM Context Status...","type":"org.scijava.command.Command"}}
 
 {"class":"sc.fiji.llm.deepseek.MacroExecutionService","values":{"priority":110.0,"type":"org.scijava.service.Service"}}
+{"class":"sc.fiji.llm.deepseek.MacroOptionCheck","values":{"priority":10001.0,"type":"org.scijava.module.process.PreprocessorPlugin"}}

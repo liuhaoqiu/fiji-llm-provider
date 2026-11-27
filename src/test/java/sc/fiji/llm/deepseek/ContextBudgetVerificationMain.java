@@ -121,7 +121,7 @@ public final class ContextBudgetVerificationMain {
         }
         verifyAutomaticContinuation();
         verifyRecoverableFailure();
-        System.out.println("PASS: automatic context settings; UTF-8 boundaries; four provider HTTP guards; automatic compaction; archived full results; visible pause checkpoint and same-chat continuation");
+        System.out.println("PASS: automatic context settings; UTF-8 boundaries; four provider HTTP guards; automatic compaction; archived full results; long lists of very large tool results shortened with counts, text untouched; visible pause checkpoint and same-chat continuation");
     }
 
     static void verifyAutomaticContinuation() throws Exception {
@@ -142,6 +142,7 @@ public final class ContextBudgetVerificationMain {
                 check(scenario.observed.get().messages().stream().anyMatch(m -> m instanceof ToolExecutionResultMessage t &&
                     t.hasSingleText() && t.text().contains("EXCERPT ONLY")), "latest large tool output identifies its archive");
             }
+        longLists();
         var context = new BoundedContext(24000, 1_048_576);
         var goal = UserMessage.from("Original goal that must survive compaction");
         var oldCall = dev.langchain4j.agent.tool.ToolExecutionRequest.builder().id("old").name("capture").arguments("{}").build();
@@ -220,4 +221,64 @@ public final class ContextBudgetVerificationMain {
         }
     }
     static void check(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
+
+    /** Two real chats carried 520,000 and 550,000 characters of ROI rows through every later request. */
+    static void longLists() throws Exception {
+        var rows = new StringBuilder("{\"present\":true,\"count\":4311,\"rois\":[");
+        for (int n = 0; n < 4311; n++) rows.append(n == 0 ? "" : ",").append("{\"roi_index\":").append(n)
+            .append(",\"name\":\"Cellpose-4_").append(n).append("\",\"selected\":false,\"type\":\"Polygon\",\"bounds\":{\"x\":21,\"y\":0,\"width\":13,\"height\":19}}");
+        rows.append("],\"histogram\":[");
+        for (int n = 0; n < 40; n++) rows.append(n == 0 ? "" : ",").append(n);
+        rows.append("],\"columns\":[\"a\",\"b\"]}");
+        check(rows.length() > 400_000, "fixture is as large as the real result");
+        var roiCall = dev.langchain4j.agent.tool.ToolExecutionRequest.builder().id("rois").name("fiji_rois_read").arguments("{}").build();
+        var textCall = dev.langchain4j.agent.tool.ToolExecutionRequest.builder().id("text").name("fiji_script_read_content").arguments("{}").build();
+        var smallCall = dev.langchain4j.agent.tool.ToolExecutionRequest.builder().id("small").name("fiji_results_read").arguments("{}").build();
+        var big = ToolExecutionResultMessage.from(roiCall, rows.toString());
+        var script = ToolExecutionResultMessage.from(textCall, "print(1);\n".repeat(9000));
+        var small = ToolExecutionResultMessage.from(smallCall, "{\"rows\":[" + "1,".repeat(300) + "1]}");
+        var request = ChatRequest.builder().messages(List.of(UserMessage.from("count the cells"),
+            AiMessage.from(roiCall, textCall, smallCall), big, script, small)).build();
+        var context = new BoundedContext(900_000, 48 << 20);
+        var sent = context.prepare(request);
+        java.util.function.Function<String, ToolExecutionResultMessage> result = id -> (ToolExecutionResultMessage) sent.messages().stream()
+            .filter(m -> m instanceof ToolExecutionResultMessage t && t.id().equals(id)).findFirst().orElseThrow();
+        var got = result.apply("rois");
+        var json = com.google.gson.JsonParser.parseString(got.text()).getAsJsonObject();
+        var list = json.getAsJsonArray("rois");
+        check(got.toolName().equals("fiji_rois_read") && got.text().length() < 6000, "the long list no longer travels with every request: " + got.text().length());
+        check(list.size() == LongLists.KEEP + 1 && list.get(0).getAsJsonObject().get("name").getAsString().equals("Cellpose-4_0")
+            && list.get(19).getAsJsonObject().get("roi_index").getAsInt() == 19, "the first rows are kept as they were");
+        var mark = list.get(LongLists.KEEP).getAsJsonObject();
+        check(mark.get("rows_omitted_here").getAsInt() == 4291 && mark.get("rows_in_total").getAsInt() == 4311, "the cut list says how many rows it had");
+        check(json.get("count").getAsInt() == 4311 && json.get("present").getAsBoolean() && json.getAsJsonArray("columns").size() == 2
+            && json.getAsJsonArray("histogram").size() == 40, "every other field, and a list that did not need cutting, is complete");
+        String stored = context.archive.store(big);
+        check(json.get("result_shortened").getAsString().contains(stored) && json.get("result_shortened").getAsString().contains("not all rows"),
+            "the result says it was shortened and where the full one is");
+        check(ChatMessageDeserializer.messageFromJson(java.nio.file.Files.readString(context.archive.directory.resolve(stored))).equals(big),
+            "the archive keeps the full result");
+        check(result.apply("text").equals(script) && result.apply("small").equals(small), "long text and ordinary results are sent unchanged");
+        check(context.prepare(sent).messages().equals(sent.messages()), "a shortened result is not shortened again");
+        context.shortenLists = false;
+        check(context.prepare(request).messages().contains(big), "switched off, the result is sent in full");
+        check(LongLists.shorten("x".repeat(200_000), "f") == null && LongLists.shorten("\"" + "x".repeat(200_000) + "\"", "f") == null
+            && LongLists.shorten("{\"log\":\"" + "x".repeat(200_000) + "\"}", "f") == null, "text is never cut, inside JSON or not");
+        var top = new StringBuilder("[");
+        for (int n = 0; n < 20000; n++) top.append(n == 0 ? "" : ",").append("[").append(n).append(",2,3]");
+        var cutTop = com.google.gson.JsonParser.parseString(LongLists.shorten(top.append("]").toString(), "")).getAsJsonArray();
+        check(cutTop.size() == LongLists.KEEP + 2 && cutTop.get(LongLists.KEEP + 1).getAsJsonObject().has("result_shortened"), "a result that is itself a list is cut the same way");
+        check(AssistantExecutionSettings.shortenLists(null), "shortening is on unless switched off");
+        // A real 1785-row table of 59,247 characters stayed just under the first limit of 60,000 and travelled with 99 requests.
+        var table = new StringBuilder("{\"title\":\"Results\",\"row_count\":1785,\"columns\":[\"Area\",\"Mean\"],\"column_count\":2,\"rows\":[");
+        for (int n = 0; n < 1785; n++) table.append(n == 0 ? "" : ",").append("{\"Area\":").append(100 + n).append(".0,\"Mean\":60.273631}");
+        table.append("]}");
+        String cutTable = LongLists.shorten(table.toString(), "f");
+        check(table.length() > 50_000 && table.length() < 60_000 && cutTable != null && cutTable.length() < 3000
+            && com.google.gson.JsonParser.parseString(cutTable).getAsJsonObject().get("row_count").getAsInt() == 1785, "a table of that size is shortened: " + table.length());
+        var controls = new StringBuilder("{\"controls\":[");
+        for (int n = 0; n < 150; n++) controls.append(n == 0 ? "" : ",").append("{\"component_path\":\"root/child[").append(n).append("]/child[0]\",\"class\":\"javax.swing.JTextField\",\"label\":\"").append("x".repeat(60)).append("\"}");
+        check(controls.append("]}").length() > 20_000 && controls.length() < LongLists.LIMIT && LongLists.shorten(controls.toString(), "f") == null,
+            "a list of interface controls as large as the largest seen so far is sent whole: " + controls.length());
+    }
 }
